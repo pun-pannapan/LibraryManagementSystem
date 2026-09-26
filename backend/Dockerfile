@@ -2,6 +2,9 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 COPY src/LibraryManagement.Api/LibraryManagement.Api.csproj src/LibraryManagement.Api/
+COPY src/LibraryManagement.Application/LibraryManagement.Application.csproj src/LibraryManagement.Application/
+COPY src/LibraryManagement.Domain/LibraryManagement.Domain.csproj src/LibraryManagement.Domain/
+COPY src/LibraryManagement.Infrastructure/LibraryManagement.Infrastructure.csproj src/LibraryManagement.Infrastructure/
 RUN dotnet restore src/LibraryManagement.Api/LibraryManagement.Api.csproj
 
 COPY src/ src/

@@ -1,4 +1,4 @@
-namespace LibraryManagement.Api.Models;
+namespace LibraryManagement.Domain.Entities;
 
 public sealed class Category
 {

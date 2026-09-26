@@ -4,6 +4,7 @@ using LibraryManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LibraryManagement.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class LibraryDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260926022016_AddIdentityAndLibraryWorkflows")]
+    partial class AddIdentityAndLibraryWorkflows
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,139 +25,7 @@ namespace LibraryManagement.Api.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("LibraryManagement.Domain.Entities.Book", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Author")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<int>("AvailabilityStatus")
-                        .HasColumnType("int");
-
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Isbn")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<int?>("PublishedYear")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Publisher")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
-
-                    b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Author");
-
-                    b.HasIndex("AvailabilityStatus");
-
-                    b.HasIndex("CategoryId");
-
-                    b.HasIndex("Isbn")
-                        .IsUnique();
-
-                    b.HasIndex("Title");
-
-                    b.ToTable("Books");
-                });
-
-            modelBuilder.Entity("LibraryManagement.Domain.Entities.BorrowTransaction", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("BookId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("BorrowedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("DueAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("ReturnedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BorrowedAtUtc");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("BookId", "Status");
-
-                    b.ToTable("BorrowTransactions");
-                });
-
-            modelBuilder.Entity("LibraryManagement.Domain.Entities.Category", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("Categories");
-                });
-
-            modelBuilder.Entity("LibraryManagement.Infrastructure.Identity.ApplicationUser", b =>
+            modelBuilder.Entity("LibraryManagement.Api.Models.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -232,6 +103,138 @@ namespace LibraryManagement.Api.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("LibraryManagement.Api.Models.Book", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Author")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("AvailabilityStatus")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Isbn")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("PublishedYear")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Publisher")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Author");
+
+                    b.HasIndex("AvailabilityStatus");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("Isbn")
+                        .IsUnique();
+
+                    b.HasIndex("Title");
+
+                    b.ToTable("Books");
+                });
+
+            modelBuilder.Entity("LibraryManagement.Api.Models.BorrowTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("BorrowedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DueAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ReturnedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BorrowedAtUtc");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("BookId", "Status");
+
+                    b.ToTable("BorrowTransactions");
+                });
+
+            modelBuilder.Entity("LibraryManagement.Api.Models.Category", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Categories");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
@@ -365,9 +368,9 @@ namespace LibraryManagement.Api.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("LibraryManagement.Domain.Entities.Book", b =>
+            modelBuilder.Entity("LibraryManagement.Api.Models.Book", b =>
                 {
-                    b.HasOne("LibraryManagement.Domain.Entities.Category", "Category")
+                    b.HasOne("LibraryManagement.Api.Models.Category", "Category")
                         .WithMany("Books")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -376,21 +379,23 @@ namespace LibraryManagement.Api.Migrations
                     b.Navigation("Category");
                 });
 
-            modelBuilder.Entity("LibraryManagement.Domain.Entities.BorrowTransaction", b =>
+            modelBuilder.Entity("LibraryManagement.Api.Models.BorrowTransaction", b =>
                 {
-                    b.HasOne("LibraryManagement.Domain.Entities.Book", "Book")
+                    b.HasOne("LibraryManagement.Api.Models.Book", "Book")
                         .WithMany("BorrowTransactions")
                         .HasForeignKey("BookId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("LibraryManagement.Infrastructure.Identity.ApplicationUser", null)
+                    b.HasOne("LibraryManagement.Api.Models.ApplicationUser", "User")
                         .WithMany("BorrowTransactions")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Book");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -404,7 +409,7 @@ namespace LibraryManagement.Api.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
-                    b.HasOne("LibraryManagement.Infrastructure.Identity.ApplicationUser", null)
+                    b.HasOne("LibraryManagement.Api.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -413,7 +418,7 @@ namespace LibraryManagement.Api.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
-                    b.HasOne("LibraryManagement.Infrastructure.Identity.ApplicationUser", null)
+                    b.HasOne("LibraryManagement.Api.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -428,7 +433,7 @@ namespace LibraryManagement.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("LibraryManagement.Infrastructure.Identity.ApplicationUser", null)
+                    b.HasOne("LibraryManagement.Api.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -437,26 +442,26 @@ namespace LibraryManagement.Api.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
-                    b.HasOne("LibraryManagement.Infrastructure.Identity.ApplicationUser", null)
+                    b.HasOne("LibraryManagement.Api.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("LibraryManagement.Domain.Entities.Book", b =>
+            modelBuilder.Entity("LibraryManagement.Api.Models.ApplicationUser", b =>
                 {
                     b.Navigation("BorrowTransactions");
                 });
 
-            modelBuilder.Entity("LibraryManagement.Domain.Entities.Category", b =>
+            modelBuilder.Entity("LibraryManagement.Api.Models.Book", b =>
+                {
+                    b.Navigation("BorrowTransactions");
+                });
+
+            modelBuilder.Entity("LibraryManagement.Api.Models.Category", b =>
                 {
                     b.Navigation("Books");
-                });
-
-            modelBuilder.Entity("LibraryManagement.Infrastructure.Identity.ApplicationUser", b =>
-                {
-                    b.Navigation("BorrowTransactions");
                 });
 #pragma warning restore 612, 618
         }
