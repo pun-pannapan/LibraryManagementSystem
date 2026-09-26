@@ -37,8 +37,26 @@
         <label class="form-label" for="status">Status</label>
         <select class="form-select" id="status" formControlName="status">
           <option value="">All statuses</option>
+          <option value="Requested">Requested</option>
           <option value="Borrowed">Borrowed</option>
+          <option value="ReturnRequested">Return requested</option>
           <option value="Returned">Returned</option>
+          <option value="Rejected">Rejected</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="col-md-6 col-lg-2">
+        <label class="form-label" for="sort">Sort</label>
+        <select class="form-select" id="sort" formControlName="sort">
+          <option value="-requestedat">Newest request</option>
+          <option value="requestedat">Oldest request</option>
+          <option value="-borrowedat">Newest assignment</option>
+          <option value="borrowedat">Oldest assignment</option>
+          <option value="dueat">Due date</option>
+          <option value="-dueat">Latest due date</option>
+          <option value="-returnedat">Recently returned</option>
+          <option value="returnedat">Oldest return</option>
+          <option value="status">Status</option>
         </select>
       </div>
       <div class="col-md-6 col-lg-2">
@@ -111,10 +129,43 @@
           <tr>
             <th scope="col">User</th>
             <th scope="col">Book</th>
-            <th scope="col">Borrow date</th>
-            <th scope="col">Due date</th>
-            <th scope="col">Return date</th>
-            <th scope="col">Status</th>
+            <th scope="col">
+              <button
+                type="button"
+                class="btn btn-link p-0 text-decoration-none fw-semibold text-body"
+                (click)="sortByColumn('borrowedat')"
+              >
+                Borrow date <span aria-hidden="true">{{ sortIndicator('borrowedat') }}</span>
+              </button>
+            </th>
+            <th scope="col">
+              <button
+                type="button"
+                class="btn btn-link p-0 text-decoration-none fw-semibold text-body"
+                (click)="sortByColumn('dueat')"
+              >
+                Due date <span aria-hidden="true">{{ sortIndicator('dueat') }}</span>
+              </button>
+            </th>
+            <th scope="col">
+              <button
+                type="button"
+                class="btn btn-link p-0 text-decoration-none fw-semibold text-body"
+                (click)="sortByColumn('returnedat')"
+              >
+                Return date <span aria-hidden="true">{{ sortIndicator('returnedat') }}</span>
+              </button>
+            </th>
+            <th scope="col">
+              <button
+                type="button"
+                class="btn btn-link p-0 text-decoration-none fw-semibold text-body"
+                (click)="sortByColumn('status')"
+              >
+                Status <span aria-hidden="true">{{ sortIndicator('status') }}</span>
+              </button>
+            </th>
+            <th scope="col">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -136,8 +187,53 @@
                   class="badge"
                   [class.text-bg-primary]="transaction.status === borrowedStatus"
                   [class.text-bg-success]="transaction.status === returnedStatus"
-                  >{{ transaction.status === borrowedStatus ? 'Borrowed' : 'Returned' }}</span
+                  [class.text-bg-warning]="
+                    transaction.status === requestedStatus ||
+                    transaction.status === returnRequestedStatus
+                  "
+                  >{{
+                    transaction.status === borrowedStatus
+                      ? 'Borrowed'
+                      : transaction.status === returnedStatus
+                        ? 'Returned'
+                        : transaction.status === requestedStatus
+                          ? 'Requested'
+                          : transaction.status === returnRequestedStatus
+                            ? 'Return requested'
+                            : transaction.status
+                  }}</span
                 >
+              </td>
+              <td class="text-nowrap">
+                @if (transaction.status === requestedStatus) {
+                  <button
+                    class="btn btn-sm btn-primary me-1"
+                    type="button"
+                    [disabled]="processingId() !== null"
+                    (click)="processAction(transaction.id, 'assign')"
+                  >
+                    Assign
+                  </button>
+                  <button
+                    class="btn btn-sm btn-outline-danger"
+                    type="button"
+                    [disabled]="processingId() !== null"
+                    (click)="processAction(transaction.id, 'reject')"
+                  >
+                    Reject
+                  </button>
+                } @else if (transaction.status === returnRequestedStatus) {
+                  <button
+                    class="btn btn-sm btn-success"
+                    type="button"
+                    [disabled]="processingId() !== null"
+                    (click)="processAction(transaction.id, 'accept-return')"
+                  >
+                    Accept Return
+                  </button>
+                } @else {
+                  <span class="text-secondary">—</span>
+                }
               </td>
             </tr>
           }

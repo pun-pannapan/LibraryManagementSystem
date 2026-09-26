@@ -25,8 +25,9 @@ export const routes: Routes = [
   },
   {
     path: 'my-borrowings',
-    canActivate: [authGuard],
+    canActivate: [authGuard, roleGuard],
     component: MyBorrowingsComponent,
+    data: { roles: ['User'] },
   },
   {
     path: 'admin',
@@ -36,8 +37,16 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'books' },
       { path: 'books', component: AdminBooksComponent },
-      { path: 'books/new', component: BookFormComponent, data: { title: 'Add Book', mode: 'create' } },
-      { path: 'books/:id/edit', component: BookFormComponent, data: { title: 'Edit Book', mode: 'edit' } },
+      {
+        path: 'books/new',
+        component: BookFormComponent,
+        data: { title: 'Add Book', mode: 'create' },
+      },
+      {
+        path: 'books/:id/edit',
+        component: BookFormComponent,
+        data: { title: 'Edit Book', mode: 'edit' },
+      },
       { path: 'transactions', component: AdminTransactionsComponent },
       {
         path: '**',

@@ -11,12 +11,17 @@ export const errorInterceptor: HttpInterceptorFn = (request, next) => {
   const router = inject(Router);
   const apiBaseUrl = environment.apiBaseUrl;
   const isApiRequest = request.url === apiBaseUrl || request.url.startsWith(`${apiBaseUrl}/`);
-  const isPublicAuthRequest = request.url === `${apiEndpoints.auth}/login`
-    || request.url === `${apiEndpoints.auth}/register`;
+  const isPublicAuthRequest =
+    request.url === `${apiEndpoints.auth}/login` || request.url === `${apiEndpoints.auth}/register`;
 
   return next(request).pipe(
     catchError((error: unknown) => {
-      if (isApiRequest && error instanceof HttpErrorResponse && error.status === 401 && !isPublicAuthRequest) {
+      if (
+        isApiRequest &&
+        error instanceof HttpErrorResponse &&
+        error.status === 401 &&
+        !isPublicAuthRequest
+      ) {
         auth.logout();
         void router.navigate(['/login'], {
           queryParams: { returnUrl: router.url },

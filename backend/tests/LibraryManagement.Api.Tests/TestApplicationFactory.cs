@@ -85,6 +85,7 @@ public sealed class TestApplicationFactory : WebApplicationFactory<Program>
 
         await SeedUserAsync(userManager, "admin@example.com", "Password123!", ApplicationRoles.Administrator);
         await SeedUserAsync(userManager, "user@example.com", "Password123!", ApplicationRoles.User);
+        await SeedUserAsync(userManager, "other@example.com", "Password123!", ApplicationRoles.User);
 
         var category = new Category
         {

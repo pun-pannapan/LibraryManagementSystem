@@ -11,7 +11,15 @@ import { CategoryDto, CreateBookRequest } from '../../../shared/models/book.mode
 import { CategoriesApiService } from '../../books/categories-api.service';
 import { ValidationMessageComponent } from '../../../shared/components/validation-message/validation-message.component';
 
-type BookFormField = 'isbn' | 'title' | 'author' | 'publisher' | 'publishedYear' | 'categoryId';
+type BookFormField =
+  | 'isbn'
+  | 'title'
+  | 'author'
+  | 'publisher'
+  | 'publishedYear'
+  | 'shelfCode'
+  | 'location'
+  | 'categoryId';
 
 @Component({
   selector: 'app-book-form',
@@ -50,6 +58,8 @@ export class BookFormComponent implements OnInit {
       '',
       [Validators.pattern(/^\d+$/), Validators.min(1000), Validators.max(this.currentYear + 1)],
     ],
+    shelfCode: ['', Validators.maxLength(50)],
+    location: ['', Validators.maxLength(150)],
     categoryId: [
       '',
       [
@@ -114,6 +124,8 @@ export class BookFormComponent implements OnInit {
             author: book.author,
             publisher: book.publisher ?? '',
             publishedYear: book.publishedYear?.toString() ?? '',
+            shelfCode: book.shelfCode ?? '',
+            location: book.location ?? '',
             categoryId: book.categoryId.toString(),
           });
         },
@@ -159,6 +171,8 @@ export class BookFormComponent implements OnInit {
       title: values.title.trim(),
       author: values.author.trim(),
       publisher: values.publisher.trim(),
+      shelfCode: values.shelfCode.trim(),
+      location: values.location.trim(),
     });
 
     if (this.form.invalid) {
@@ -173,6 +187,8 @@ export class BookFormComponent implements OnInit {
       publisher: values.publisher.trim() || null,
       publishedYear: values.publishedYear ? Number(values.publishedYear) : null,
       categoryId: values.categoryId,
+      shelfCode: values.shelfCode.trim() || null,
+      location: values.location.trim() || null,
     };
 
     const rowVersion = this.rowVersion;
@@ -237,6 +253,8 @@ export class BookFormComponent implements OnInit {
           'author',
           'publisher',
           'publishedYear',
+          'shelfCode',
+          'location',
           'categoryId',
         ];
         for (const [name, messages] of Object.entries(body.errors)) {

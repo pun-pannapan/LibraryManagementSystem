@@ -15,8 +15,10 @@ import {
   tap,
 } from 'rxjs';
 import { ApiErrorService } from '../../../core/http/api-error.service';
+import { AuthService } from '../../../core/auth/auth.service';
 import { NotificationService } from '../../../core/notifications/notification.service';
 import {
+  BOOK_SORT_FIELDS,
   BookAvailabilityStatus,
   BookSearchRequest,
   BookSummary,
@@ -37,6 +39,7 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
   styleUrl: './book-list.component.css',
 })
 export class BookListComponent implements OnInit {
+  private readonly auth = inject(AuthService);
   private readonly booksApi = inject(BooksApiService);
   private readonly categoriesApi = inject(CategoriesApiService);
   private readonly apiErrors = inject(ApiErrorService);
@@ -56,12 +59,15 @@ export class BookListComponent implements OnInit {
   protected readonly isBorrowing = signal(false);
   protected readonly borrowError = signal<string | null>(null);
   protected readonly availableStatus = BookAvailabilityStatus.Available;
+  protected readonly isAdministrator = this.auth.currentRoles;
+  protected readonly reservedStatus = BookAvailabilityStatus.Reserved;
   protected readonly result = signal<PagedResult<BookSummary> | null>(null);
+  protected readonly sortActivated = signal(false);
   protected readonly query = signal<BookSearchRequest>({
     sortBy: 'title',
     sortDirection: 'asc',
     page: 1,
-    pageSize: 20,
+    pageSize: 10,
   });
   protected readonly filterForm = this.formBuilder.nonNullable.group({
     search: [''],
@@ -71,7 +77,7 @@ export class BookListComponent implements OnInit {
     available: [''],
     sortBy: ['title'],
     sortDirection: ['asc'],
-    pageSize: ['20'],
+    pageSize: ['10'],
   });
   private readonly refreshRequests = new Subject<void>();
 
@@ -123,6 +129,7 @@ export class BookListComponent implements OnInit {
 
   protected applyFilters(): void {
     const values = this.filterForm.getRawValue();
+    this.sortActivated.set(true);
     const categoryId = values.categoryId.trim() || undefined;
     const available = values.available === '' ? undefined : values.available === 'true';
     const query: BookSearchRequest = {
@@ -149,7 +156,7 @@ export class BookListComponent implements OnInit {
       available: '',
       sortBy: 'title',
       sortDirection: 'asc',
-      pageSize: '20',
+      pageSize: '10',
     });
     this.applyFilters();
   }
@@ -158,6 +165,25 @@ export class BookListComponent implements OnInit {
     const totalPages = this.result()?.totalPages ?? 0;
     if (page < 1 || page > totalPages || page === this.query().page) return;
     void this.updateUrl({ ...this.query(), page });
+  }
+
+  protected changePageSize(value: string): void {
+    const pageSize = Number(value);
+    if (![10, 20, 50].includes(pageSize)) return;
+    const query = { ...this.query(), page: 1, pageSize };
+    void this.updateUrl(query);
+  }
+
+  protected sortByColumn(sortBy: NonNullable<BookSearchRequest['sortBy']>): void {
+    this.sortActivated.set(true);
+    const current = this.query();
+    const direction = current.sortBy === sortBy && current.sortDirection === 'asc' ? 'desc' : 'asc';
+    void this.updateUrl({ ...current, sortBy, sortDirection: direction, page: 1 });
+  }
+
+  protected sortIndicator(sortBy: NonNullable<BookSearchRequest['sortBy']>): string {
+    if (!this.sortActivated() || this.query().sortBy !== sortBy) return '';
+    return this.query().sortDirection === 'asc' ? '↑' : '↓';
   }
 
   protected reload(): void {
@@ -197,7 +223,7 @@ export class BookListComponent implements OnInit {
       .subscribe({
         next: () => {
           this.pendingBorrowId.set(null);
-          this.notifications.show('success', `“${book.title}” was borrowed successfully.`);
+          this.notifications.show('success', `Borrow request submitted for “${book.title}”.`);
           this.reload();
         },
         error: (error: unknown) => {
@@ -222,7 +248,7 @@ export class BookListComponent implements OnInit {
         sortBy: query.sortBy ?? 'title',
         sortDirection: query.sortDirection ?? 'asc',
         page: query.page ?? 1,
-        pageSize: query.pageSize ?? 20,
+        pageSize: query.pageSize ?? 10,
       },
       replaceUrl,
     });
@@ -242,10 +268,12 @@ export class BookListComponent implements OnInit {
       isbn: params.get('isbn') || undefined,
       categoryId: categoryValue && this.isGuid(categoryValue) ? categoryValue : undefined,
       available: availableValue === 'true' ? true : availableValue === 'false' ? false : undefined,
-      sortBy: sortBy === 'author' || sortBy === 'publishedYear' ? sortBy : 'title',
+      sortBy: BOOK_SORT_FIELDS.includes(sortBy as NonNullable<BookSearchRequest['sortBy']>)
+        ? (sortBy as NonNullable<BookSearchRequest['sortBy']>)
+        : 'title',
       sortDirection: sortDirection === 'desc' ? 'desc' : 'asc',
       page: Number.isInteger(pageValue) && pageValue > 0 ? pageValue : 1,
-      pageSize: [10, 20, 50].includes(pageSizeValue) ? pageSizeValue : 20,
+      pageSize: [10, 20, 50].includes(pageSizeValue) ? pageSizeValue : 10,
     };
   }
 
@@ -259,7 +287,7 @@ export class BookListComponent implements OnInit {
         available: query.available === undefined ? '' : String(query.available),
         sortBy: query.sortBy ?? 'title',
         sortDirection: query.sortDirection ?? 'asc',
-        pageSize: String(query.pageSize ?? 20),
+        pageSize: String(query.pageSize ?? 10),
       },
       { emitEvent: false },
     );

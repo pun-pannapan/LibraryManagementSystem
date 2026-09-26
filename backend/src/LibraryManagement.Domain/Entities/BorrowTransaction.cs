@@ -12,11 +12,27 @@ public sealed class BorrowTransaction
 
     public Guid UserId { get; set; }
 
-    public DateTime BorrowedAtUtc { get; set; }
+    public DateTime? BorrowedAtUtc { get; set; }
 
-    public DateTime DueAtUtc { get; set; }
+    public DateTime? DueAtUtc { get; set; }
 
     public DateTime? ReturnedAtUtc { get; set; }
+
+    public DateTime RequestedAtUtc { get; set; }
+
+    public DateTime? AssignedAtUtc { get; set; }
+
+    public Guid? AssignedByUserId { get; set; }
+
+    public DateTime? ReturnRequestedAtUtc { get; set; }
+
+    public Guid? ProcessedByUserId { get; set; }
+
+    public DateTime? RejectedAtUtc { get; set; }
+
+    public Guid? RejectedByUserId { get; set; }
+
+    public DateTime? CancelledAtUtc { get; set; }
 
     public BorrowTransactionStatus Status { get; set; } = BorrowTransactionStatus.Borrowed;
 

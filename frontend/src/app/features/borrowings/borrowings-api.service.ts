@@ -51,4 +51,32 @@ export class BorrowingsApiService {
       {},
     );
   }
+
+  cancelBorrowRequest(borrowingId: string): Observable<BorrowTransactionDto> {
+    return this.http.post<BorrowTransactionDto>(
+      `${apiEndpoints.borrowings}/${borrowingId}/cancel`,
+      {},
+    );
+  }
+
+  assignBorrowing(borrowingId: string): Observable<BorrowTransactionDto> {
+    return this.http.post<BorrowTransactionDto>(
+      `${apiEndpoints.borrowings}/${borrowingId}/assign`,
+      {},
+    );
+  }
+
+  rejectBorrowing(borrowingId: string): Observable<BorrowTransactionDto> {
+    return this.http.post<BorrowTransactionDto>(
+      `${apiEndpoints.borrowings}/${borrowingId}/reject`,
+      {},
+    );
+  }
+
+  acceptReturn(borrowingId: string): Observable<BorrowTransactionDto> {
+    return this.http.post<BorrowTransactionDto>(
+      `${apiEndpoints.borrowings}/${borrowingId}/accept-return`,
+      {},
+    );
+  }
 }

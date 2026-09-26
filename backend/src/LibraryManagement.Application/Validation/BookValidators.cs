@@ -14,6 +14,8 @@ public sealed class CreateBookRequestValidator : AbstractValidator<CreateBookReq
             request => request.Author,
             request => request.Publisher,
             request => request.PublishedYear,
+            request => request.ShelfCode,
+            request => request.Location,
             request => request.CategoryId));
     }
 }
@@ -28,6 +30,8 @@ public sealed class UpdateBookRequestValidator : AbstractValidator<UpdateBookReq
             request => request.Author,
             request => request.Publisher,
             request => request.PublishedYear,
+            request => request.ShelfCode,
+            request => request.Location,
             request => request.CategoryId));
 
         RuleFor(request => request.RowVersion)
@@ -42,22 +46,22 @@ public sealed class UpdateBookRequestValidator : AbstractValidator<UpdateBookReq
 
 public sealed class GetBooksQueryValidator : AbstractValidator<GetBooksQuery>
 {
-    private static readonly string[] AllowedSortFields = ["title", "author", "publicationyear", "publishedyear"];
-
     public GetBooksQueryValidator()
     {
         RuleFor(query => query.Search).MaximumLength(250);
         RuleFor(query => query.Title).MaximumLength(250);
         RuleFor(query => query.Author).MaximumLength(200);
         RuleFor(query => query.Isbn).MaximumLength(20);
+        RuleFor(query => query.ShelfCode).MaximumLength(50);
+        RuleFor(query => query.Location).MaximumLength(150);
         RuleFor(query => query.CategoryId).NotEmpty().When(query => query.CategoryId.HasValue);
         RuleFor(query => query.Page).GreaterThan(0);
         RuleFor(query => query.PageSize).InclusiveBetween(1, 100);
 
         RuleFor(query => query.SortBy)
             .Must(value => string.IsNullOrWhiteSpace(value)
-                || AllowedSortFields.Contains(value.Trim().ToLowerInvariant()))
-            .WithMessage("Sort by must be title, author, or publicationYear.");
+                || BookSortFields.All.Contains(value.Trim()))
+            .WithMessage("Sort by must be title, author, isbn, category, publicationYear, shelfCode, or location.");
 
         RuleFor(query => query.SortDirection)
             .Must(value => string.IsNullOrWhiteSpace(value)
@@ -75,6 +79,8 @@ internal sealed class BookRequestRules<T> : AbstractValidator<T>
         Expression<Func<T, string>> author,
         Expression<Func<T, string?>> publisher,
         Expression<Func<T, int?>> publishedYear,
+        Expression<Func<T, string?>> shelfCode,
+        Expression<Func<T, string?>> location,
         Expression<Func<T, Guid>> categoryId)
     {
         var publishedYearAccessor = publishedYear.Compile();
@@ -102,6 +108,9 @@ internal sealed class BookRequestRules<T> : AbstractValidator<T>
             .InclusiveBetween(1000, DateTime.UtcNow.Year + 1)
             .When(request => publishedYearAccessor(request).HasValue)
             .WithName(nameof(CreateBookRequest.PublishedYear));
+
+        RuleFor(shelfCode).MaximumLength(50).WithName(nameof(CreateBookRequest.ShelfCode));
+        RuleFor(location).MaximumLength(150).WithName(nameof(CreateBookRequest.Location));
 
         RuleFor(categoryId)
             .NotEmpty()

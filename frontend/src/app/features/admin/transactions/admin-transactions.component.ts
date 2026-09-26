@@ -15,11 +15,16 @@ import {
   tap,
 } from 'rxjs';
 import { ApiErrorService } from '../../../core/http/api-error.service';
+import { NotificationService } from '../../../core/notifications/notification.service';
 import { BorrowingsApiService } from '../../borrowings/borrowings-api.service';
 import {
   AdminBorrowingHistoryRequest,
+  BORROWING_HISTORY_SORTS,
+  BORROWING_STATUS_FILTERS,
   BorrowTransactionDto,
   BorrowTransactionStatus,
+  BorrowingHistorySort,
+  BorrowingStatusFilter,
 } from '../../../shared/models/borrowing.models';
 import { PagedResult } from '../../../shared/models/api.models';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
@@ -27,6 +32,7 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
 interface TransactionFilters {
   search: string;
   status: string;
+  sort: BorrowingHistorySort;
   borrowedFrom: string;
   borrowedTo: string;
   returnedFrom: string;
@@ -46,6 +52,7 @@ export class AdminTransactionsComponent implements OnInit {
   private readonly api = inject(BorrowingsApiService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly apiErrors = inject(ApiErrorService);
+  private readonly notifications = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly refreshRequests = new Subject<void>();
 
@@ -53,13 +60,14 @@ export class AdminTransactionsComponent implements OnInit {
   protected readonly result = signal<PagedResult<BorrowTransactionDto> | null>(null);
   protected readonly filters = signal<TransactionFilters>(this.emptyFilters());
   protected readonly page = signal(1);
-  protected readonly pageSize = signal(20);
+  protected readonly pageSize = signal(10);
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly filterError = signal<string | null>(null);
   protected readonly filterForm = this.formBuilder.nonNullable.group({
     search: ['', Validators.maxLength(250)],
     status: [''],
+    sort: ['-requestedat'],
     borrowedFrom: [''],
     borrowedTo: [''],
     returnedFrom: [''],
@@ -67,6 +75,9 @@ export class AdminTransactionsComponent implements OnInit {
   });
   protected readonly borrowedStatus = BorrowTransactionStatus.Borrowed;
   protected readonly returnedStatus = BorrowTransactionStatus.Returned;
+  protected readonly requestedStatus = BorrowTransactionStatus.Requested;
+  protected readonly returnRequestedStatus = BorrowTransactionStatus.ReturnRequested;
+  protected readonly processingId = signal<string | null>(null);
 
   ngOnInit(): void {
     combineLatest([this.route.queryParamMap, this.refreshRequests.pipe(startWith(undefined))])
@@ -106,7 +117,11 @@ export class AdminTransactionsComponent implements OnInit {
 
   protected applyFilters(): void {
     const values = this.filterForm.getRawValue();
-    const filters = { ...values, search: values.search.trim() };
+    const filters = {
+      ...values,
+      search: values.search.trim(),
+      sort: values.sort as BorrowingHistorySort,
+    };
     this.filterForm.patchValue(filters);
     this.filterError.set(null);
 
@@ -144,9 +159,42 @@ export class AdminTransactionsComponent implements OnInit {
     this.refreshRequests.next();
   }
 
+  protected processAction(id: string, action: 'assign' | 'reject' | 'accept-return'): void {
+    if (this.processingId()) return;
+
+    const request = this.transactionActionRequest(id, action);
+    this.processingId.set(id);
+    request.pipe(finalize(() => this.processingId.set(null))).subscribe({
+      next: () => {
+        this.notifications.show('success', this.transactionActionMessage(action));
+        this.refreshRequests.next();
+      },
+      error: (error: unknown) => {
+        this.errorMessage.set(
+          this.apiErrors.messageFor(error, 'The transaction could not be processed.'),
+        );
+        this.refreshRequests.next();
+      },
+    });
+  }
+
   protected changePageSize(value: string): void {
     const pageSize = Number(value);
     if ([10, 20, 50].includes(pageSize)) void this.navigate(this.filters(), 1, pageSize);
+  }
+
+  protected sortByColumn(column: 'borrowedat' | 'dueat' | 'returnedat' | 'status'): void {
+    const current = this.filters().sort;
+    const ascending = current !== column;
+    const sort = (ascending ? column : `-${column}`) as BorrowingHistorySort;
+    const filters = { ...this.filters(), sort };
+    void this.navigate(filters, 1, this.pageSize());
+  }
+
+  protected sortIndicator(column: 'borrowedat' | 'dueat' | 'returnedat' | 'status'): string {
+    const sort = this.filters().sort;
+    if (sort !== column && sort !== `-${column}`) return '';
+    return sort === column ? '↑' : '↓';
   }
 
   private readQuery(params: ParamMap): {
@@ -155,9 +203,14 @@ export class AdminTransactionsComponent implements OnInit {
     pageSize: number;
     request: AdminBorrowingHistoryRequest;
   } {
+    const sortValue = params.get('sort') ?? '-requestedat';
+    const sort = BORROWING_HISTORY_SORTS.includes(sortValue as BorrowingHistorySort)
+      ? (sortValue as BorrowingHistorySort)
+      : '-requestedat';
     const filters: TransactionFilters = {
       search: params.get('search') ?? '',
       status: params.get('status') ?? '',
+      sort,
       borrowedFrom: this.readDate(params.get('borrowedFrom')),
       borrowedTo: this.readDate(params.get('borrowedTo')),
       returnedFrom: this.readDate(params.get('returnedFrom')),
@@ -167,17 +220,18 @@ export class AdminTransactionsComponent implements OnInit {
     const pageSizeValue = Number(params.get('pageSize'));
     const request: AdminBorrowingHistoryRequest = {
       search: filters.search || undefined,
-      status:
-        filters.status === 'Borrowed' || filters.status === 'Returned' ? filters.status : undefined,
+      status: BORROWING_STATUS_FILTERS.includes(filters.status as BorrowingStatusFilter)
+        ? (filters.status as BorrowingStatusFilter)
+        : undefined,
       borrowedFrom: filters.borrowedFrom ? `${filters.borrowedFrom}T00:00:00Z` : undefined,
       borrowedTo: filters.borrowedTo ? `${filters.borrowedTo}T23:59:59.9999999Z` : undefined,
       returnedFrom: filters.returnedFrom ? `${filters.returnedFrom}T00:00:00Z` : undefined,
       returnedTo: filters.returnedTo ? `${filters.returnedTo}T23:59:59.9999999Z` : undefined,
-      sort: '-borrowedat',
+      sort: BORROWING_HISTORY_SORTS.includes(filters.sort) ? filters.sort : '-requestedat',
       page: Number.isInteger(pageValue) && pageValue > 0 ? pageValue : 1,
-      pageSize: [10, 20, 50].includes(pageSizeValue) ? pageSizeValue : 20,
+      pageSize: [10, 20, 50].includes(pageSizeValue) ? pageSizeValue : 10,
     };
-    return { filters, page: request.page ?? 1, pageSize: request.pageSize ?? 20, request };
+    return { filters, page: request.page ?? 1, pageSize: request.pageSize ?? 10, request };
   }
 
   private navigate(filters: TransactionFilters, page: number, pageSize: number): Promise<boolean> {
@@ -186,6 +240,7 @@ export class AdminTransactionsComponent implements OnInit {
       queryParams: {
         search: filters.search || null,
         status: filters.status || null,
+        sort: filters.sort || '-requestedat',
         borrowedFrom: filters.borrowedFrom || null,
         borrowedTo: filters.borrowedTo || null,
         returnedFrom: filters.returnedFrom || null,
@@ -204,10 +259,33 @@ export class AdminTransactionsComponent implements OnInit {
       : '';
   }
 
+  private transactionActionRequest(id: string, action: 'assign' | 'reject' | 'accept-return') {
+    switch (action) {
+      case 'assign':
+        return this.api.assignBorrowing(id);
+      case 'reject':
+        return this.api.rejectBorrowing(id);
+      case 'accept-return':
+        return this.api.acceptReturn(id);
+    }
+  }
+
+  private transactionActionMessage(action: 'assign' | 'reject' | 'accept-return'): string {
+    switch (action) {
+      case 'assign':
+        return 'Borrow request assigned.';
+      case 'reject':
+        return 'Borrow request rejected.';
+      case 'accept-return':
+        return 'Return accepted.';
+    }
+  }
+
   private emptyFilters(): TransactionFilters {
     return {
       search: '',
       status: '',
+      sort: '-requestedat',
       borrowedFrom: '',
       borrowedTo: '',
       returnedFrom: '',

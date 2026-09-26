@@ -31,6 +31,8 @@ public sealed record BookDto(
     string Author,
     string? Publisher,
     int? PublishedYear,
+    string? ShelfCode,
+    string? Location,
     Guid CategoryId,
     string CategoryName,
     BookAvailabilityStatus AvailabilityStatus,
@@ -42,7 +44,9 @@ public sealed record CreateBookRequest(
     string Author,
     string? Publisher,
     int? PublishedYear,
-    Guid CategoryId);
+    Guid CategoryId,
+    string? ShelfCode = null,
+    string? Location = null);
 
 public sealed record UpdateBookRequest(
     string Isbn,
@@ -51,7 +55,9 @@ public sealed record UpdateBookRequest(
     string? Publisher,
     int? PublishedYear,
     Guid CategoryId,
-    string RowVersion);
+    string RowVersion,
+    string? ShelfCode = null,
+    string? Location = null);
 
 public sealed record GetBooksQuery(
     string? Search,
@@ -63,7 +69,9 @@ public sealed record GetBooksQuery(
     string? SortBy,
     string? SortDirection,
     int Page,
-    int PageSize);
+    int PageSize,
+    string? ShelfCode = null,
+    string? Location = null);
 
 public sealed record PagedResult<T>(
     IReadOnlyCollection<T> Items,
@@ -89,7 +97,15 @@ public sealed record BorrowTransactionDto(
     string BookTitle,
     Guid UserId,
     string UserEmail,
-    DateTime BorrowedAtUtc,
-    DateTime DueAtUtc,
+    DateTime? BorrowedAtUtc,
+    DateTime? DueAtUtc,
     DateTime? ReturnedAtUtc,
-    BorrowTransactionStatus Status);
+    BorrowTransactionStatus Status,
+    DateTime RequestedAtUtc,
+    DateTime? AssignedAtUtc,
+    DateTime? ReturnRequestedAtUtc,
+    Guid? AssignedByUserId,
+    Guid? ProcessedByUserId,
+    DateTime? RejectedAtUtc,
+    Guid? RejectedByUserId,
+    DateTime? CancelledAtUtc);

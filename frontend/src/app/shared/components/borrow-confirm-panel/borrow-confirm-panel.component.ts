@@ -5,22 +5,38 @@ import { Component, input, output } from '@angular/core';
   standalone: true,
   template: `
     @if (bookTitle(); as title) {
-      <section class="border rounded-3 bg-light p-3 mb-3" role="group" aria-labelledby="borrow-confirm-title">
+      <section
+        class="border rounded-3 bg-light p-3 mb-3"
+        role="group"
+        aria-labelledby="borrow-confirm-title"
+      >
         <h2 id="borrow-confirm-title" class="h6">Borrow “{{ title }}”?</h2>
-        <p class="small text-secondary">The library will record this borrowing under your account.</p>
+        <p class="small text-secondary">Your request will wait for librarian assignment.</p>
         @if (errorMessage(); as message) {
           <div class="alert alert-danger py-2" role="alert">{{ message }}</div>
         }
         <div class="d-flex gap-2">
-          <button class="btn btn-primary btn-sm" type="button" [disabled]="busy()" (click)="confirm.emit()">
+          <button
+            class="btn btn-primary btn-sm"
+            type="button"
+            [disabled]="busy()"
+            (click)="confirm.emit()"
+          >
             @if (busy()) {
               <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
-              <span>Borrowing…</span>
+              <span>Submitting request…</span>
             } @else {
-              <span>Confirm borrow</span>
+              <span>Confirm borrow request</span>
             }
           </button>
-          <button class="btn btn-outline-secondary btn-sm" type="button" [disabled]="busy()" (click)="cancel.emit()">Cancel</button>
+          <button
+            class="btn btn-outline-secondary btn-sm"
+            type="button"
+            [disabled]="busy()"
+            (click)="cancel.emit()"
+          >
+            Cancel
+          </button>
         </div>
       </section>
     }

@@ -23,7 +23,4 @@ export interface ApiMessageError {
   message: string;
 }
 
-export type ApiErrorResponse =
-  | ApiProblemDetails
-  | ValidationProblemDetails
-  | ApiMessageError;
+export type ApiErrorResponse = ApiProblemDetails | ValidationProblemDetails | ApiMessageError;

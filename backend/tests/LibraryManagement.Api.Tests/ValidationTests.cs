@@ -59,6 +59,29 @@ public sealed class ValidationTests
         result.Errors.Should().Contain(error => error.PropertyName == nameof(GetBooksQuery.SortDirection));
     }
 
+    [Theory]
+    [InlineData(BookSortFields.Isbn)]
+    [InlineData(BookSortFields.Category)]
+    [InlineData(BookSortFields.ShelfCode)]
+    public void GetBooksQueryValidator_AcceptsSupportedSortFields(string sortBy)
+    {
+        var validator = new GetBooksQueryValidator();
+
+        var result = validator.Validate(new GetBooksQuery(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            sortBy,
+            "asc",
+            1,
+            10));
+
+        result.IsValid.Should().BeTrue();
+    }
+
     [Fact]
     public void BorrowBookRequestValidator_RejectsMissingBookId()
     {

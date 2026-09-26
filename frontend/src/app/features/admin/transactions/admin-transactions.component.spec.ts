@@ -29,7 +29,7 @@ describe('AdminTransactionsComponent', () => {
     const request = TestBed.inject(HttpTestingController).expectOne(
       (candidate) => candidate.url === '/api/v1/borrowings',
     );
-    request.flush({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0 });
+    request.flush({ items: [], page: 1, pageSize: 10, totalCount: 0, totalPages: 0 });
     fixture.detectChanges();
     return { fixture, request };
   }

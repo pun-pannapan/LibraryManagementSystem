@@ -3,7 +3,10 @@ import { Injectable } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class ApiErrorService {
-  messageFor(error: unknown, fallback = 'The request could not be completed. Please try again.'): string {
+  messageFor(
+    error: unknown,
+    fallback = 'The request could not be completed. Please try again.',
+  ): string {
     if (!(error instanceof HttpErrorResponse)) return fallback;
 
     switch (error.status) {
@@ -21,7 +24,7 @@ export class ApiErrorService {
       default:
         return error.status >= 500
           ? 'An unexpected error occurred. Please try again.'
-          : this.validationMessage(error.error) ?? fallback;
+          : (this.validationMessage(error.error) ?? fallback);
     }
   }
 
@@ -40,7 +43,9 @@ export class ApiErrorService {
     const errors = (body as { errors?: unknown }).errors;
     if (typeof errors !== 'object' || errors === null) return null;
 
-    const firstError = Object.values(errors).flat().find((value): value is string => typeof value === 'string');
+    const firstError = Object.values(errors)
+      .flat()
+      .find((value): value is string => typeof value === 'string');
     return firstError ?? null;
   }
 }

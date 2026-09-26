@@ -18,24 +18,59 @@
       <div id="libraryNavigation" class="collapse navbar-collapse" [class.show]="menuOpen()">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item">
-            <a class="nav-link" routerLink="/books" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" (click)="closeMenu()">Books</a>
+            <a
+              class="nav-link"
+              routerLink="/books"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              ariaCurrentWhenActive="page"
+              (click)="closeMenu()"
+              >Books</a
+            >
           </li>
-          <li class="nav-item">
-            <a class="nav-link" routerLink="/my-borrowings" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeMenu()">My Borrowings</a>
-          </li>
+          @if (!isAdministrator()) {
+            <li class="nav-item">
+              <a
+                class="nav-link"
+                routerLink="/my-borrowings"
+                routerLinkActive="active"
+                ariaCurrentWhenActive="page"
+                (click)="closeMenu()"
+                >My Borrowings</a
+              >
+            </li>
+          }
           @if (isAdministrator()) {
             <li class="nav-item">
-              <a class="nav-link" routerLink="/admin/books" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeMenu()">Manage Books</a>
+              <a
+                class="nav-link"
+                routerLink="/admin/books"
+                routerLinkActive="active"
+                ariaCurrentWhenActive="page"
+                (click)="closeMenu()"
+                >Manage Books</a
+              >
             </li>
             <li class="nav-item">
-              <a class="nav-link" routerLink="/admin/transactions" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeMenu()">Transactions</a>
+              <a
+                class="nav-link"
+                routerLink="/admin/transactions"
+                routerLinkActive="active"
+                ariaCurrentWhenActive="page"
+                (click)="closeMenu()"
+                >Transactions</a
+              >
             </li>
           }
         </ul>
 
         <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2">
-          <span class="small text-secondary" aria-label="Signed in user">{{ userDisplayName() }}</span>
-          <button class="btn btn-outline-secondary btn-sm" type="button" (click)="logout()">Log out</button>
+          <span class="small text-secondary" aria-label="Signed in user">{{
+            userDisplayName()
+          }}</span>
+          <button class="btn btn-outline-secondary btn-sm" type="button" (click)="logout()">
+            Log out
+          </button>
         </div>
       </div>
     </div>
@@ -44,9 +79,20 @@
 
 @if (notifications.current(); as notification) {
   <div class="container pt-3" aria-live="polite" aria-atomic="true">
-    <div class="alert alert-{{ notification.type === 'error' ? 'danger' : notification.type }} alert-dismissible" [attr.role]="notification.type === 'error' ? 'alert' : 'status'">
+    <div
+      class="alert notification-alert alert-{{
+        notification.type === 'error' ? 'danger' : notification.type
+      }} alert-dismissible"
+      [class.notification-fading]="notification.fading"
+      [attr.role]="notification.type === 'error' ? 'alert' : 'status'"
+    >
       {{ notification.message }}
-      <button class="btn-close" type="button" aria-label="Dismiss notification" (click)="notifications.dismiss()"></button>
+      <button
+        class="btn-close"
+        type="button"
+        aria-label="Dismiss notification"
+        (click)="notifications.dismiss()"
+      ></button>
     </div>
   </div>
 }

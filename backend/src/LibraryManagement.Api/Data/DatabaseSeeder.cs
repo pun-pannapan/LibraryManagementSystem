@@ -44,15 +44,24 @@ public static class DatabaseSeeder
 
         var bookDefinitions = new[]
         {
-            new BookDefinition("9780140449136", "The Odyssey", "Homer", "Penguin Classics", 1996, "Fiction"),
-            new BookDefinition("9780132350884", "Clean Code", "Robert C. Martin", "Prentice Hall", 2008, "Technology"),
-            new BookDefinition("9780201616224", "The Pragmatic Programmer", "Andrew Hunt and David Thomas", "Addison-Wesley", 1999, "Technology"),
-            new BookDefinition("9780066620992", "Good to Great", "Jim Collins", "HarperBusiness", 2001, "Business")
+            new BookDefinition("9780140449136", "The Odyssey", "Homer", "Penguin Classics", 1996, "Fiction", "FIC-01", "Main Library - Floor 1"),
+            new BookDefinition("9780132350884", "Clean Code", "Robert C. Martin", "Prentice Hall", 2008, "Technology", "TEC-01", "Main Library - Floor 2"),
+            new BookDefinition("9780201616224", "The Pragmatic Programmer", "Andrew Hunt and David Thomas", "Addison-Wesley", 1999, "Technology", "TEC-02", "Main Library - Floor 2"),
+            new BookDefinition("9780066620992", "Good to Great", "Jim Collins", "HarperBusiness", 2001, "Business", "BUS-01", "Main Library - Floor 1"),
+            new BookDefinition("9780134494166", "Effective Modern C++", "Scott Meyers", "O'Reilly Media", 2014, "Technology", "TEC-03", "Main Library - Floor 2"),
+            new BookDefinition("9780135957059", "The Pragmatic Programmer (20th Anniversary)", "David Thomas and Andrew Hunt", "Addison-Wesley", 2019, "Technology", "TEC-04", "Main Library - Floor 2"),
+            new BookDefinition("9781491950357", "Designing Data-Intensive Applications", "Martin Kleppmann", "O'Reilly Media", 2017, "Technology", "TEC-05", "Main Library - Floor 2"),
+            new BookDefinition("9781449337711", "JavaScript: The Good Parts", "Douglas Crockford", "O'Reilly Media", 2008, "Technology", "TEC-06", "Main Library - Floor 2"),
+            new BookDefinition("9780321125217", "Domain-Driven Design", "Eric Evans", "Addison-Wesley", 2003, "Technology", "TEC-07", "Main Library - Floor 2"),
+            new BookDefinition("9780062315007", "The Lean Startup", "Eric Ries", "Crown Business", 2011, "Business", "BUS-02", "Main Library - Floor 1"),
+            new BookDefinition("9780307887894", "The Personal MBA", "Josh Kaufman", "Portfolio", 2010, "Business", "BUS-03", "Main Library - Floor 1"),
+            new BookDefinition("9780399588174", "Atomic Habits", "James Clear", "Avery", 2018, "Business", "BUS-04", "Main Library - Floor 1")
         };
 
         foreach (var definition in bookDefinitions)
         {
-            if (!await dbContext.Books.AnyAsync(book => book.Isbn == definition.Isbn, cancellationToken))
+            var existingBook = await dbContext.Books.SingleOrDefaultAsync(book => book.Isbn == definition.Isbn, cancellationToken);
+            if (existingBook is null)
             {
                 dbContext.Books.Add(new Book
                 {
@@ -61,8 +70,15 @@ public static class DatabaseSeeder
                     Author = definition.Author,
                     Publisher = definition.Publisher,
                     PublishedYear = definition.PublishedYear,
+                    ShelfCode = definition.ShelfCode,
+                    Location = definition.Location,
                     CategoryId = categories[definition.CategoryName].Id
                 });
+            }
+            else
+            {
+                existingBook.ShelfCode ??= definition.ShelfCode;
+                existingBook.Location ??= definition.Location;
             }
         }
 
@@ -156,5 +172,7 @@ public static class DatabaseSeeder
         string Author,
         string Publisher,
         int PublishedYear,
-        string CategoryName);
+        string CategoryName,
+        string? ShelfCode = null,
+        string? Location = null);
 }

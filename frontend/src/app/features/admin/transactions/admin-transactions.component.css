@@ -1,5 +1,17 @@
-th { white-space: nowrap; }
+th {
+  white-space: nowrap;
+  vertical-align: middle;
+  height: 3.25rem;
+}
 
-td { min-width: 8rem; }
+th .btn-link {
+  line-height: 1.25;
+}
 
-td:first-child { min-width: 15rem; }
+td {
+  min-width: 8rem;
+}
+
+td:first-child {
+  min-width: 15rem;
+}

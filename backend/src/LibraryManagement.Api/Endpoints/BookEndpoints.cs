@@ -69,6 +69,8 @@ public static class BookEndpoints
         [FromQuery] string? title,
         [FromQuery] string? author,
         [FromQuery] string? isbn,
+        [FromQuery] string? shelfCode,
+        [FromQuery] string? location,
         [FromQuery] Guid? categoryId,
         [FromQuery] bool? available,
         [FromQuery] string? sortBy,
@@ -77,7 +79,7 @@ public static class BookEndpoints
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var request = new GetBooksQuery(search, title, author, isbn, categoryId, available, sortBy, sortDirection, page, pageSize);
+        var request = new GetBooksQuery(search, title, author, isbn, categoryId, available, sortBy, sortDirection, page, pageSize, shelfCode, location);
         var validation = EndpointHelpers.ValidationProblem(await validator.ValidateAsync(request, cancellationToken));
         if (validation is not null)
         {
@@ -95,7 +97,9 @@ public static class BookEndpoints
             query = query.Where(book =>
                 book.Title.Contains(value)
                 || book.Author.Contains(value)
-                || book.Isbn.Contains(value));
+                || book.Isbn.Contains(value)
+                || (book.ShelfCode != null && book.ShelfCode.Contains(value))
+                || (book.Location != null && book.Location.Contains(value)));
         }
 
         if (!string.IsNullOrWhiteSpace(title))
@@ -113,6 +117,16 @@ public static class BookEndpoints
             query = query.Where(book => book.Isbn.Contains(isbn.Trim()));
         }
 
+        if (!string.IsNullOrWhiteSpace(shelfCode))
+        {
+            query = query.Where(book => book.ShelfCode != null && book.ShelfCode.Contains(shelfCode.Trim()));
+        }
+
+        if (!string.IsNullOrWhiteSpace(location))
+        {
+            query = query.Where(book => book.Location != null && book.Location.Contains(location.Trim()));
+        }
+
         if (categoryId.HasValue)
         {
             query = query.Where(book => book.CategoryId == categoryId.Value);
@@ -120,8 +134,9 @@ public static class BookEndpoints
 
         if (available.HasValue)
         {
-            query = query.Where(book => book.AvailabilityStatus ==
-                (available.Value ? BookAvailabilityStatus.Available : BookAvailabilityStatus.Borrowed));
+            query = available.Value
+                ? query.Where(book => book.AvailabilityStatus == BookAvailabilityStatus.Available)
+                : query.Where(book => book.AvailabilityStatus != BookAvailabilityStatus.Available);
         }
 
         query = ApplySorting(query, sortBy, sortDirection);
@@ -137,6 +152,8 @@ public static class BookEndpoints
                 book.Author,
                 book.Publisher,
                 book.PublishedYear,
+                book.ShelfCode,
+                book.Location,
                 book.CategoryId,
                 book.Category.Name,
                 book.AvailabilityStatus,
@@ -187,6 +204,8 @@ public static class BookEndpoints
             Author = request.Author.Trim(),
             Publisher = NormalizeOptional(request.Publisher),
             PublishedYear = request.PublishedYear,
+            ShelfCode = NormalizeOptional(request.ShelfCode),
+            Location = NormalizeOptional(request.Location),
             CategoryId = request.CategoryId
         };
 
@@ -240,6 +259,8 @@ public static class BookEndpoints
         book.Author = request.Author.Trim();
         book.Publisher = NormalizeOptional(request.Publisher);
         book.PublishedYear = request.PublishedYear;
+        book.ShelfCode = NormalizeOptional(request.ShelfCode);
+        book.Location = NormalizeOptional(request.Location);
         book.CategoryId = request.CategoryId;
         dbContext.Entry(book).Property(item => item.RowVersion).OriginalValue = rowVersion;
 
@@ -302,12 +323,24 @@ public static class BookEndpoints
 
         return sortBy?.Trim().ToLowerInvariant() switch
         {
-            "author" => descending
+            BookSortFields.Isbn => descending
+                ? query.OrderByDescending(book => book.Isbn).ThenBy(book => book.Title)
+                : query.OrderBy(book => book.Isbn).ThenBy(book => book.Title),
+            BookSortFields.Author => descending
                 ? query.OrderByDescending(book => book.Author).ThenBy(book => book.Title)
                 : query.OrderBy(book => book.Author).ThenBy(book => book.Title),
-            "publicationyear" or "publishedyear" => descending
+            BookSortFields.Category or BookSortFields.CategoryName => descending
+                ? query.OrderByDescending(book => book.Category.Name).ThenBy(book => book.Title)
+                : query.OrderBy(book => book.Category.Name).ThenBy(book => book.Title),
+            BookSortFields.PublicationYear or BookSortFields.PublishedYear => descending
                 ? query.OrderByDescending(book => book.PublishedYear).ThenBy(book => book.Title)
                 : query.OrderBy(book => book.PublishedYear).ThenBy(book => book.Title),
+            BookSortFields.ShelfCode => descending
+                ? query.OrderByDescending(book => book.ShelfCode).ThenBy(book => book.Title)
+                : query.OrderBy(book => book.ShelfCode).ThenBy(book => book.Title),
+            BookSortFields.Location => descending
+                ? query.OrderByDescending(book => book.Location).ThenBy(book => book.Title)
+                : query.OrderBy(book => book.Location).ThenBy(book => book.Title),
             _ => descending
                 ? query.OrderByDescending(book => book.Title)
                 : query.OrderBy(book => book.Title)

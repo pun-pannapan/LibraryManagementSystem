@@ -18,7 +18,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 })
 export class RouteMessageComponent {
   private readonly route = inject(ActivatedRoute);
-  protected readonly title = this.route.snapshot.data['title'] as string ?? 'Page not found';
-  protected readonly description = this.route.snapshot.data['description'] as string
-    ?? 'The page you requested could not be found.';
+  protected readonly title = (this.route.snapshot.data['title'] as string) ?? 'Page not found';
+  protected readonly description =
+    (this.route.snapshot.data['description'] as string) ??
+    'The page you requested could not be found.';
 }

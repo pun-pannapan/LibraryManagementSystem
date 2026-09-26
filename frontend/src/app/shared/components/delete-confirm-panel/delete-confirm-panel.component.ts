@@ -5,14 +5,25 @@ import { Component, input, output } from '@angular/core';
   standalone: true,
   template: `
     @if (bookTitle(); as title) {
-      <section class="border border-danger-subtle rounded-3 bg-light p-3 mb-3" role="group" aria-labelledby="delete-confirm-title">
+      <section
+        class="border border-danger-subtle rounded-3 bg-light p-3 mb-3"
+        role="group"
+        aria-labelledby="delete-confirm-title"
+      >
         <h2 id="delete-confirm-title" class="h6">Delete “{{ title }}”?</h2>
-        <p class="small text-secondary">This action cannot be undone. Books with borrowing history cannot be deleted.</p>
+        <p class="small text-secondary">
+          This action cannot be undone. Books with borrowing history cannot be deleted.
+        </p>
         @if (errorMessage(); as message) {
           <div class="alert alert-danger py-2" role="alert">{{ message }}</div>
         }
         <div class="d-flex gap-2">
-          <button class="btn btn-danger btn-sm" type="button" [disabled]="busy()" (click)="confirm.emit()">
+          <button
+            class="btn btn-danger btn-sm"
+            type="button"
+            [disabled]="busy()"
+            (click)="confirm.emit()"
+          >
             @if (busy()) {
               <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
               <span>Deleting…</span>
@@ -20,7 +31,14 @@ import { Component, input, output } from '@angular/core';
               <span>Delete book</span>
             }
           </button>
-          <button class="btn btn-outline-secondary btn-sm" type="button" [disabled]="busy()" (click)="cancel.emit()">Cancel</button>
+          <button
+            class="btn btn-outline-secondary btn-sm"
+            type="button"
+            [disabled]="busy()"
+            (click)="cancel.emit()"
+          >
+            Cancel
+          </button>
         </div>
       </section>
     }

@@ -10,7 +10,9 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 
   if (!token) return next(request);
 
-  return next(request.clone({
-    setHeaders: { Authorization: `Bearer ${token}` },
-  }));
+  return next(
+    request.clone({
+      setHeaders: { Authorization: `Bearer ${token}` },
+    }),
+  );
 };

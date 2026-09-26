@@ -22,8 +22,6 @@ public sealed class ReturnBorrowingRequestValidator : AbstractValidator<ReturnBo
 
 public sealed class BorrowingHistoryQueryValidator : AbstractValidator<BorrowingHistoryQuery>
 {
-    private static readonly string[] AllowedSortFields = ["borrowedat", "dueat", "returnedat", "status"];
-
     public BorrowingHistoryQueryValidator()
     {
         RuleFor(query => query.Page).GreaterThan(0);
@@ -32,13 +30,13 @@ public sealed class BorrowingHistoryQueryValidator : AbstractValidator<Borrowing
         RuleFor(query => query.Status)
             .Must(value => string.IsNullOrWhiteSpace(value)
                 || Enum.TryParse<BorrowTransactionStatus>(value, ignoreCase: true, out _))
-            .WithMessage("Status must be Borrowed or Returned.");
+            .WithMessage("Status must be Requested, Borrowed, ReturnRequested, Returned, Rejected, or Cancelled.");
 
         RuleFor(query => query.Search).MaximumLength(250);
 
         RuleFor(query => query.Sort)
             .Must(value => string.IsNullOrWhiteSpace(value)
-                || AllowedSortFields.Contains(value.Trim().TrimStart('-').ToLowerInvariant()))
-            .WithMessage("Sort must be borrowedAt, dueAt, returnedAt, status, or the same value prefixed with '-' for descending.");
+                || BorrowingHistorySortFields.All.Contains(value.Trim().TrimStart('-')))
+            .WithMessage("Sort must be requestedAt, assignedAt, returnRequestedAt, borrowedAt, dueAt, returnedAt, status, or the same value prefixed with '-' for descending.");
     }
 }

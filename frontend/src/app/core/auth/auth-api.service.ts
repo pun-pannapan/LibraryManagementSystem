@@ -2,7 +2,12 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { apiEndpoints } from '../config/api-endpoints';
-import { AuthResponse, LoginRequest, RegisterRequest, UserDto } from '../../shared/models/auth.models';
+import {
+  AuthResponse,
+  LoginRequest,
+  RegisterRequest,
+  UserDto,
+} from '../../shared/models/auth.models';
 
 @Injectable({ providedIn: 'root' })
 export class AuthApiService {

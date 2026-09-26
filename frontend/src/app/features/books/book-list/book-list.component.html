@@ -52,7 +52,11 @@
           <select id="sortBy" class="form-select" formControlName="sortBy">
             <option value="title">Title</option>
             <option value="author">Author</option>
+            <option value="isbn">ISBN</option>
+            <option value="category">Category</option>
             <option value="publishedYear">Publication year</option>
+            <option value="shelfCode">Shelf</option>
+            <option value="location">Location</option>
           </select>
         </div>
         <div class="col-6 col-md-4 col-xl-2">
@@ -64,7 +68,12 @@
         </div>
         <div class="col-6 col-md-4 col-xl-2">
           <label class="form-label" for="pageSize">Rows per page</label>
-          <select id="pageSize" class="form-select" formControlName="pageSize">
+          <select
+            id="pageSize"
+            class="form-select"
+            formControlName="pageSize"
+            (change)="changePageSize($any($event.target).value)"
+          >
             <option value="10">10</option>
             <option value="20">20</option>
             <option value="50">50</option>
@@ -130,11 +139,94 @@
         </caption>
         <thead class="table-light">
           <tr>
-            <th scope="col">Title</th>
-            <th scope="col">Author</th>
-            <th scope="col">ISBN</th>
-            <th scope="col">Category</th>
-            <th scope="col">Year</th>
+            <th
+              scope="col"
+              [attr.aria-sort]="
+                query().sortBy === 'title'
+                  ? query().sortDirection === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+            >
+              <button type="button" class="table-sort-button" (click)="sortByColumn('title')">
+                Title <span aria-hidden="true">{{ sortIndicator('title') }}</span>
+              </button>
+            </th>
+            <th
+              scope="col"
+              [attr.aria-sort]="
+                query().sortBy === 'author'
+                  ? query().sortDirection === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+            >
+              <button type="button" class="table-sort-button" (click)="sortByColumn('author')">
+                Author <span aria-hidden="true">{{ sortIndicator('author') }}</span>
+              </button>
+            </th>
+            <th
+              scope="col"
+              [attr.aria-sort]="
+                query().sortBy === 'isbn'
+                  ? query().sortDirection === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+            >
+              <button type="button" class="table-sort-button" (click)="sortByColumn('isbn')">
+                ISBN <span aria-hidden="true">{{ sortIndicator('isbn') }}</span>
+              </button>
+            </th>
+            <th
+              scope="col"
+              [attr.aria-sort]="
+                query().sortBy === 'category'
+                  ? query().sortDirection === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+            >
+              <button type="button" class="table-sort-button" (click)="sortByColumn('category')">
+                Category <span aria-hidden="true">{{ sortIndicator('category') }}</span>
+              </button>
+            </th>
+            <th
+              scope="col"
+              [attr.aria-sort]="
+                query().sortBy === 'shelfCode'
+                  ? query().sortDirection === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+            >
+              <button type="button" class="table-sort-button" (click)="sortByColumn('shelfCode')">
+                Shelf / Location <span aria-hidden="true">{{ sortIndicator('shelfCode') }}</span>
+              </button>
+            </th>
+            <th
+              scope="col"
+              [attr.aria-sort]="
+                query().sortBy === 'publishedYear'
+                  ? query().sortDirection === 'asc'
+                    ? 'ascending'
+                    : 'descending'
+                  : 'none'
+              "
+            >
+              <button
+                type="button"
+                class="table-sort-button"
+                (click)="sortByColumn('publishedYear')"
+              >
+                Year <span aria-hidden="true">{{ sortIndicator('publishedYear') }}</span>
+              </button>
+            </th>
             <th scope="col">Availability</th>
             <th scope="col"><span class="visually-hidden">Actions</span></th>
           </tr>
@@ -146,10 +238,18 @@
               <td>{{ book.author }}</td>
               <td class="text-nowrap">{{ book.isbn }}</td>
               <td>{{ book.categoryName }}</td>
+              <td>
+                {{ book.shelfCode || '-'
+                }}<span class="text-secondary">{{
+                  book.location ? ' · ' + book.location : ''
+                }}</span>
+              </td>
               <td>{{ book.publishedYear ?? '—' }}</td>
               <td>
                 @if (book.availabilityStatus === availableStatus) {
                   <span class="badge text-bg-success">Available</span>
+                } @else if (book.availabilityStatus === reservedStatus) {
+                  <span class="badge text-bg-warning">Reserved</span>
                 } @else {
                   <span class="badge text-bg-secondary">Borrowed</span>
                 }
@@ -162,15 +262,17 @@
                     queryParamsHandling="preserve"
                     >View</a
                   >
-                  <button
-                    class="btn btn-primary btn-sm"
-                    type="button"
-                    [disabled]="isBorrowing() || book.availabilityStatus !== availableStatus"
-                    [attr.aria-label]="'Borrow ' + book.title"
-                    (click)="requestBorrow(book)"
-                  >
-                    Borrow
-                  </button>
+                  @if (!isAdministrator().includes('Administrator')) {
+                    <button
+                      class="btn btn-primary btn-sm"
+                      type="button"
+                      [disabled]="isBorrowing() || book.availabilityStatus !== availableStatus"
+                      [attr.aria-label]="'Borrow ' + book.title"
+                      (click)="requestBorrow(book)"
+                    >
+                      Borrow
+                    </button>
+                  }
                 </div>
               </td>
             </tr>
@@ -182,6 +284,16 @@
     <app-pagination
       [page]="query().page ?? 1"
       [totalPages]="result()?.totalPages ?? 0"
+      [summary]="
+        'Showing ' +
+        books().length +
+        ' of ' +
+        (result()?.totalCount ?? 0) +
+        ' books · Page ' +
+        (query().page ?? 1) +
+        ' of ' +
+        (result()?.totalPages ?? 1)
+      "
       label="Book list pages"
       (pageChange)="goToPage($event)"
     />

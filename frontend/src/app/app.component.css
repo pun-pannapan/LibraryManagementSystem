@@ -7,6 +7,15 @@
   font-weight: 600;
 }
 
+.notification-alert {
+  opacity: 1;
+  transition: opacity 300ms ease;
+}
+
+.notification-alert.notification-fading {
+  opacity: 0;
+}
+
 .status-row {
   position: fixed;
   right: 1rem;
@@ -38,8 +47,14 @@
   background: #d35c4a;
 }
 
-.status-row.online { border-color: #99d6c9; color: #12695f; }
-.status-row.offline { border-color: #efb2a8; color: #a33a2b; }
+.status-row.online {
+  border-color: #99d6c9;
+  color: #12695f;
+}
+.status-row.offline {
+  border-color: #efb2a8;
+  color: #a33a2b;
+}
 
 @media (max-width: 575.98px) {
   .status-row {

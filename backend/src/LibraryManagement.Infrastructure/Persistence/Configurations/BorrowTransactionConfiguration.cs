@@ -11,10 +11,13 @@ public sealed class BorrowTransactionConfiguration : IEntityTypeConfiguration<Bo
         builder.Property(transaction => transaction.Status).IsRequired();
         builder.Property(transaction => transaction.CreatedAtUtc).IsRequired();
         builder.Property(transaction => transaction.UpdatedAtUtc).IsRequired();
+        builder.Property(transaction => transaction.RequestedAtUtc).IsRequired();
 
         builder.HasIndex(transaction => new { transaction.BookId, transaction.Status });
         builder.HasIndex(transaction => transaction.UserId);
         builder.HasIndex(transaction => transaction.BorrowedAtUtc);
+        builder.HasIndex(transaction => new { transaction.UserId, transaction.Status });
+        builder.HasIndex(transaction => new { transaction.Status, transaction.CreatedAtUtc });
 
         builder.HasOne(transaction => transaction.Book)
             .WithMany(book => book.BorrowTransactions)

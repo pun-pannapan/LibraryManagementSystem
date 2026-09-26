@@ -3,6 +3,7 @@ using FluentValidation.Results;
 using LibraryManagement.Application.Contracts;
 using LibraryManagement.Domain.Entities;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagement.Api.Endpoints;
@@ -51,6 +52,8 @@ public static class EndpointHelpers
         book.Author,
         book.Publisher,
         book.PublishedYear,
+        book.ShelfCode,
+        book.Location,
         book.CategoryId,
         book.Category.Name,
         book.AvailabilityStatus,
@@ -65,9 +68,16 @@ public static class EndpointHelpers
         transaction.BorrowedAtUtc,
         transaction.DueAtUtc,
         transaction.ReturnedAtUtc,
-        transaction.Status);
+        transaction.Status,
+        transaction.RequestedAtUtc,
+        transaction.AssignedAtUtc,
+        transaction.ReturnRequestedAtUtc,
+        transaction.AssignedByUserId,
+        transaction.ProcessedByUserId,
+        transaction.RejectedAtUtc,
+        transaction.RejectedByUserId,
+        transaction.CancelledAtUtc);
 
     public static bool IsDuplicateKey(DbUpdateException exception) =>
-        exception.InnerException?.Message.Contains("duplicate", StringComparison.OrdinalIgnoreCase) == true
-        || exception.InnerException?.Message.Contains("unique", StringComparison.OrdinalIgnoreCase) == true;
+        exception.InnerException is SqlException { Number: 2601 or 2627 };
 }

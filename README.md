@@ -132,6 +132,11 @@ DELETE /api/v1/books/{id}
 
 POST /api/v1/borrowings
 POST /api/v1/borrowings/{id}/return
+POST /api/v1/borrowings/{id}/request-return
+POST /api/v1/borrowings/{id}/cancel
+POST /api/v1/borrowings/{id}/assign       (Administrator)
+POST /api/v1/borrowings/{id}/reject       (Administrator)
+POST /api/v1/borrowings/{id}/accept-return (Administrator)
 GET  /api/v1/borrowings/me
 GET  /api/v1/borrowings
 
@@ -163,10 +168,11 @@ Use the account configured by `SEED_USER_EMAIL` and `SEED_USER_PASSWORD` in `.en
 
 - Login successfully and confirm that `/books` opens.
 - Open a book detail page.
-- Borrow an available book.
+- Request an available book and confirm it becomes `Requested`.
 - Open `/my-borrowings` and confirm the borrowing appears.
-- Return the book.
-- Confirm the transaction status changes to `Returned`.
+- As an administrator, open `/admin/transactions` and click `Assign`.
+- As the user, request the book return and confirm it becomes `ReturnRequested`.
+- As an administrator, click `Accept Return` and confirm the transaction becomes `Returned`.
 - Confirm that administrator links are not visible.
 
 ### 4. Test Administrator
@@ -175,6 +181,7 @@ Use the account configured by `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `.
 
 - Login successfully and open `/admin/books`.
 - Create a book, edit it, and delete it.
+- Set and verify the book Shelf Code and Location fields.
 - Confirm that required-field, whitespace-only, invalid-year, and missing-category validation prevents invalid submissions.
 - Open `/admin/transactions`.
 - Search by a user email/name, book title, or ISBN, then test status, date, and pagination filters.
@@ -353,7 +360,7 @@ Optional query parameters:
 status=Borrowed
 page=1
 pageSize=20
-sort=-borrowedAt
+sort=-requestedAt
 ```
 
 ### 7. Return a Book
@@ -371,6 +378,9 @@ Expected result:
 ```text
 200 OK
 ```
+
+The return endpoint creates a `ReturnRequested` transaction. An administrator must call
+`POST /api/v1/borrowings/{id}/accept-return` to complete the return and make the book available again.
 
 ### 8. Check Authorization Rules
 
@@ -392,7 +402,65 @@ In Development, the API applies migrations and seeds the local database during s
 
 `Categories.Id`, `Books.Id`, and `BorrowTransactions.Id` (plus the related book/category foreign keys) use SQL Server `uniqueidentifier` values. The `UseGuidLibraryEntityIds` migration preserves existing relationships while assigning GUIDs to existing rows. Because converting those generated values back to identity integers is not lossless, the migration's down direction is intentionally unsupported; use a database backup or `docker compose down -v` when a clean reset is required.
 
+### High-Level Architecture
+
+The system uses a layered web architecture. The browser hosts the Angular single-page application, while Nginx serves the built frontend and proxies API requests to the ASP.NET Core service. The API applies authentication, validation, and borrowing workflow rules before accessing SQL Server through EF Core and ASP.NET Core Identity.
+
+[Architecture diagram image](assets/diagram/architech%20diagram.png)
+
+![High-level architecture diagram](assets/diagram/architech%20diagram.png)
+
+```mermaid
+flowchart TB
+    Browser["Web browser"]
+
+    subgraph Docker["Docker Compose deployment"]
+        subgraph WebContainer["web container"]
+            Angular["Angular SPA<br/>Books, borrowings, admin"]
+            Nginx["Nginx<br/>Static hosting + reverse proxy"]
+        end
+
+        subgraph ApiContainer["api container"]
+            Api["ASP.NET Core 8 API<br/>REST endpoints"]
+            Auth["JWT authentication<br/>Role-based authorization"]
+            Contracts["DTOs / contracts"]
+            Validation["Request validation"]
+            Workflow["Borrowing workflow<br/>Request → Assign → Borrow → Return request → Accept"]
+            Ef["EF Core persistence"]
+            Identity["ASP.NET Core Identity"]
+            Migrations["Migrations + seed data"]
+        end
+
+        subgraph DbContainer["db container"]
+            Sql["SQL Server"]
+        end
+    end
+
+    Decisions["Key decisions<br/>JWT + RBAC<br/>Server-side filtering, sorting, pagination<br/>Explicit borrowing state transitions<br/>Docker Compose deployment"]
+
+    Browser --> Angular
+    Angular -->|HTTPS JSON + bearer token| Nginx
+    Nginx --> Api
+    Api --> Auth
+    Api --> Contracts
+    Api --> Validation
+    Api --> Workflow
+    Workflow --> Ef
+    Auth --> Identity
+    Ef --> Sql
+    Identity --> Sql
+    Migrations --> Sql
+    Decisions -.-> Api
+    Decisions -.-> Ef
+```
+
+Data flows from the Angular UI to the API as authenticated JSON requests over the Docker Compose network. The API validates input and authorization, executes the relevant borrowing or inventory workflow, persists changes in the SQL Server container, and returns DTOs and HTTP status codes to the UI. Sorting, filtering, and pagination are performed server-side so each screen can request only the data it needs.
+
 ### ER Diagram
+
+[ER diagram image](assets/diagram/er%20diagram.png)
+
+![Entity relationship diagram](assets/diagram/er%20diagram.png)
 
 ```mermaid
 erDiagram
@@ -413,6 +481,8 @@ erDiagram
         string Author
         string Publisher
         int PublishedYear
+        string ShelfCode
+        string Location
         int AvailabilityStatus
         guid CategoryId FK
         datetime CreatedAtUtc
@@ -427,6 +497,11 @@ erDiagram
         datetime BorrowedAtUtc
         datetime DueAtUtc
         datetime ReturnedAtUtc
+        datetime RequestedAtUtc
+        datetime AssignedAtUtc
+        datetime ReturnRequestedAtUtc
+        guid AssignedByUserId
+        guid ProcessedByUserId
         int Status
         datetime CreatedAtUtc
         datetime UpdatedAtUtc
@@ -524,6 +599,18 @@ Main frontend routes:
 
 AI was used as a development assistant for reviewing, testing, and documenting this project. All generated suggestions were checked against the source code, API contracts, build output, and automated tests before being kept.
 
+### AI Tools Disclosure
+
+The project used **OpenAI Codex (ChatGPT-based coding assistant)** during development. It was used as a support tool when development issues occurred, including:
+
+- Investigating errors from the frontend, backend API, Docker containers, and browser runtime
+- Reviewing changed code for correctness, security, readability, and maintainability
+- Suggesting focused fixes and refactoring opportunities based on the existing code and requirements
+- Identifying useful unit-test scenarios and checking edge cases
+- Helping update project documentation, architecture diagrams, and manual verification steps
+
+The tool was used interactively with project-specific prompts and the relevant source code, logs, screenshots, API responses, or requirements as context. Suggestions were reviewed by the developer, implemented only when appropriate, and verified with builds, automated tests, and manual checks. AI was not treated as an autonomous decision-maker, and generated output was not accepted without review.
+
 The following recommended prompts describe the types of assistance used during implementation. Replace the placeholder context with the relevant files, code, logs, or API contract before sending a prompt.
 
 1. **Docker environment review**
@@ -550,11 +637,29 @@ The following recommended prompts describe the types of assistance used during i
 
    **ภาษาไทย**
 
-   > ช่วยเขียน unit test และ integration test สำหรับ backend API ตามการใช้งานจริง ครอบคลุมกรณีสำเร็จ validation error, authentication, authorization, not found, conflict และกรณีข้อมูลไม่ถูกต้อง
+   > ช่วยระบุรายการ Backend API unit test ที่ควรมีให้ครอบคลุมอย่างน้อยดังนี้:
+   >
+   > - Unit test สำหรับ validator, business rule, status transition ของการยืม/คืนหนังสือ, sorting และ pagination
+   > - การตรวจสอบ logic การ login และ token รวมถึงกรณี 401/403
+   > - Book CRUD: สร้าง, แก้ไข, ลบ, ค้นหา, sort, filter, pagination และข้อมูล Shelf/Location
+   > - Borrowing workflow: สร้างคำขอยืม, assign, reject, cancel, request return และ accept return
+   > - กรณีสำเร็จ, validation error, malformed input, not found, conflict, duplicate ISBN และ resource ไม่พร้อมใช้งาน
+   > - ตรวจสอบสิทธิ์ของ End User กับ Librarian/Administrator และยืนยันว่าไม่สามารถเข้าถึงข้อมูลของผู้ใช้อื่นโดยไม่ได้รับอนุญาต
+   >
+   > แต่ละ test ควรระบุ expected result และ edge cases ที่สำคัญอย่างชัดเจน พร้อมรันซ้ำได้โดยไม่พึ่งพาลำดับของ test อื่น
 
    **English**
 
-   > Write unit and integration tests for this backend API based on its actual behavior and API contract. Cover successful requests, validation errors, authentication, authorization, not-found responses, conflicts, malformed input, and important edge cases.
+   > Specify the Backend API unit tests that should exist. At minimum cover:
+   >
+   > - Unit tests for validators, business rules, borrowing/return status transitions, sorting, and pagination
+   > - Login and token-validation logic, including 401 and 403 cases
+   > - Book CRUD, search, sorting, filtering, pagination, and Shelf/Location fields
+   > - Borrowing workflow: create request, assign, reject, cancel, request return, and accept return
+   > - Successful requests, validation errors, malformed input, not-found responses, conflicts, duplicate ISBNs, and unavailable resources
+   > - End User versus Librarian/Administrator authorization, including protection against accessing another user’s data
+   >
+   > Each test should document the expected result and important edge cases. Tests must be isolated, repeatable, and independent of execution order.
 
 4. **Authentication token troubleshooting**
 

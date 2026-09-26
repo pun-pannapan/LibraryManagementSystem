@@ -126,6 +126,34 @@
             />
           </div>
           <div class="col-12 col-md-6">
+            <label class="form-label" for="shelfCode">Shelf code</label>
+            <input
+              id="shelfCode"
+              class="form-control"
+              formControlName="shelfCode"
+              maxlength="50"
+              placeholder="e.g. A-03"
+              [class.is-invalid]="fieldError('shelfCode') !== null"
+              [attr.aria-describedby]="fieldError('shelfCode') ? 'shelfCode-error' : null"
+              (input)="clearServerError('shelfCode')"
+            />
+            <app-validation-message id="shelfCode-error" [message]="fieldError('shelfCode')" />
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="location">Location</label>
+            <input
+              id="location"
+              class="form-control"
+              formControlName="location"
+              maxlength="150"
+              placeholder="e.g. Second floor - Science zone"
+              [class.is-invalid]="fieldError('location') !== null"
+              [attr.aria-describedby]="fieldError('location') ? 'location-error' : null"
+              (input)="clearServerError('location')"
+            />
+            <app-validation-message id="location-error" [message]="fieldError('location')" />
+          </div>
+          <div class="col-12 col-md-6">
             <label class="form-label" for="categoryId"
               >Category <span aria-hidden="true">*</span></label
             >

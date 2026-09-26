@@ -13,5 +13,5 @@ import { ActivatedRoute } from '@angular/router';
 })
 export class FeaturePlaceholderComponent {
   private readonly route = inject(ActivatedRoute);
-  protected readonly title = this.route.snapshot.data['title'] as string ?? 'Library';
+  protected readonly title = (this.route.snapshot.data['title'] as string) ?? 'Library';
 }

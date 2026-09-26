@@ -8,10 +8,27 @@
     <a class="btn btn-primary" routerLink="/admin/books/new">Add Book</a>
   </div>
 
-  <form class="d-flex flex-wrap gap-2 mb-4" (ngSubmit)="search()">
+  <form class="d-flex flex-wrap gap-2 mb-4" (submit)="$event.preventDefault()">
     <label class="visually-hidden" for="inventorySearch">Search inventory</label>
-    <input id="inventorySearch" class="form-control inventory-search" [formControl]="searchControl" placeholder="Search title, author, or ISBN" />
-    <button class="btn btn-outline-primary" type="submit">Search</button>
+    <input
+      id="inventorySearch"
+      class="form-control inventory-search"
+      [formControl]="searchControl"
+      placeholder="Search title, author, or ISBN"
+      (keydown.enter)="$event.preventDefault(); search()"
+    />
+    <button class="btn btn-outline-primary" type="button" (click)="search()">Search</button>
+    <label class="visually-hidden" for="inventoryPageSize">Rows per page</label>
+    <select
+      id="inventoryPageSize"
+      class="form-select w-auto"
+      [value]="query().pageSize"
+      (change)="changePageSize($any($event.target).value)"
+    >
+      <option value="10">10</option>
+      <option value="20">20</option>
+      <option value="50">50</option>
+    </select>
   </form>
 
   <app-delete-confirm-panel
@@ -22,14 +39,23 @@
     (cancel)="cancelDelete()"
   />
   @if (loading()) {
-    <div class="d-flex align-items-center gap-2 py-5 text-secondary" role="status" aria-live="polite">
+    <div
+      class="d-flex align-items-center gap-2 py-5 text-secondary"
+      role="status"
+      aria-live="polite"
+    >
       <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
       <span>Loading inventory…</span>
     </div>
   } @else if (errorMessage(); as message) {
-    <div class="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-3" role="alert">
+    <div
+      class="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-3"
+      role="alert"
+    >
       <span>{{ message }}</span>
-      <button class="btn btn-outline-danger btn-sm" type="button" (click)="retry()">Try again</button>
+      <button class="btn btn-outline-danger btn-sm" type="button" (click)="retry()">
+        Try again
+      </button>
     </div>
   } @else if (books().length === 0) {
     <div class="text-center rounded-3 border bg-white p-5">
@@ -39,13 +65,65 @@
   } @else {
     <div class="table-responsive rounded-3 border bg-white">
       <table class="table table-hover align-middle mb-0">
-        <caption class="visually-hidden">Administrator book inventory</caption>
+        <caption class="visually-hidden">
+          Administrator book inventory
+        </caption>
         <thead class="table-light">
           <tr>
-            <th scope="col">Title</th>
-            <th scope="col">Author</th>
-            <th scope="col">ISBN</th>
-            <th scope="col">Category</th>
+            <th scope="col">
+              <button
+                type="button"
+                class="btn btn-link p-0 text-decoration-none fw-semibold text-body"
+                (click)="sortByColumn('title')"
+              >
+                Title <span aria-hidden="true">{{ sortIndicator('title') }}</span>
+              </button>
+            </th>
+            <th scope="col">
+              <button
+                type="button"
+                class="btn btn-link p-0 text-decoration-none fw-semibold text-body"
+                (click)="sortByColumn('author')"
+              >
+                Author <span aria-hidden="true">{{ sortIndicator('author') }}</span>
+              </button>
+            </th>
+            <th scope="col">
+              <button
+                type="button"
+                class="btn btn-link p-0 text-decoration-none fw-semibold text-body"
+                (click)="sortByColumn('isbn')"
+              >
+                ISBN <span aria-hidden="true">{{ sortIndicator('isbn') }}</span>
+              </button>
+            </th>
+            <th scope="col">
+              <button
+                type="button"
+                class="btn btn-link p-0 text-decoration-none fw-semibold text-body"
+                (click)="sortByColumn('category')"
+              >
+                Category <span aria-hidden="true">{{ sortIndicator('category') }}</span>
+              </button>
+            </th>
+            <th scope="col">
+              <button
+                type="button"
+                class="btn btn-link p-0 text-decoration-none fw-semibold text-body"
+                (click)="sortByColumn('shelfCode')"
+              >
+                Shelf / Location <span aria-hidden="true">{{ sortIndicator('shelfCode') }}</span>
+              </button>
+            </th>
+            <th scope="col">
+              <button
+                type="button"
+                class="btn btn-link p-0 text-decoration-none fw-semibold text-body"
+                (click)="sortByColumn('publishedYear')"
+              >
+                Year <span aria-hidden="true">{{ sortIndicator('publishedYear') }}</span>
+              </button>
+            </th>
             <th scope="col">Availability</th>
             <th scope="col"><span class="visually-hidden">Actions</span></th>
           </tr>
@@ -58,17 +136,45 @@
               <td class="text-nowrap">{{ book.isbn }}</td>
               <td>{{ book.categoryName }}</td>
               <td>
+                {{ book.shelfCode || '-'
+                }}<span class="text-secondary">{{
+                  book.location ? ' · ' + book.location : ''
+                }}</span>
+              </td>
+              <td>{{ book.publishedYear ?? '—' }}</td>
+              <td>
                 @if (book.availabilityStatus === availableStatus) {
                   <span class="badge text-bg-success">Available</span>
+                } @else if (book.availabilityStatus === reservedStatus) {
+                  <span class="badge text-bg-warning">Reserved</span>
                 } @else {
                   <span class="badge text-bg-secondary">Borrowed</span>
                 }
               </td>
               <td>
                 <div class="d-flex flex-nowrap gap-2">
-                  <a class="btn btn-outline-secondary btn-sm" [attr.aria-label]="'View ' + book.title" [routerLink]="['/books', book.id]">View</a>
-                  <a class="btn btn-outline-primary btn-sm" [attr.aria-label]="'Edit ' + book.title" [routerLink]="['/admin/books', book.id, 'edit']" queryParamsHandling="preserve">Edit</a>
-                  <button class="btn btn-outline-danger btn-sm" type="button" [attr.aria-label]="'Delete ' + book.title" [disabled]="isDeleting()" (click)="requestDelete(book)">Delete</button>
+                  <a
+                    class="btn btn-outline-secondary btn-sm"
+                    [attr.aria-label]="'View ' + book.title"
+                    [routerLink]="['/books', book.id]"
+                    >View</a
+                  >
+                  <a
+                    class="btn btn-outline-primary btn-sm"
+                    [attr.aria-label]="'Edit ' + book.title"
+                    [routerLink]="['/admin/books', book.id, 'edit']"
+                    queryParamsHandling="preserve"
+                    >Edit</a
+                  >
+                  <button
+                    class="btn btn-outline-danger btn-sm"
+                    type="button"
+                    [attr.aria-label]="'Delete ' + book.title"
+                    [disabled]="isDeleting()"
+                    (click)="requestDelete(book)"
+                  >
+                    Delete
+                  </button>
                 </div>
               </td>
             </tr>
@@ -77,6 +183,18 @@
       </table>
     </div>
 
-    <app-pagination [page]="query().page" [totalPages]="result()?.totalPages ?? 0" [summary]="(result()?.totalCount ?? 0) + ' books · Page ' + query().page + ' of ' + (result()?.totalPages ?? 0)" label="Inventory pages" (pageChange)="goToPage($event)" />
+    <app-pagination
+      [page]="query().page"
+      [totalPages]="result()?.totalPages ?? 0"
+      [summary]="
+        (result()?.totalCount ?? 0) +
+        ' books · Page ' +
+        query().page +
+        ' of ' +
+        (result()?.totalPages ?? 0)
+      "
+      label="Inventory pages"
+      (pageChange)="goToPage($event)"
+    />
   }
 </main>

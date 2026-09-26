@@ -16,6 +16,10 @@ public sealed class Book
 
     public int? PublishedYear { get; set; }
 
+    public string? ShelfCode { get; set; }
+
+    public string? Location { get; set; }
+
     public BookAvailabilityStatus AvailabilityStatus { get; set; } = BookAvailabilityStatus.Available;
 
     public Guid CategoryId { get; set; }

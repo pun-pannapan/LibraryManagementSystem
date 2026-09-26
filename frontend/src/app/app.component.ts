@@ -9,7 +9,7 @@ import { NotificationService } from './core/notifications/notification.service';
   selector: 'app-root',
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.css'
+  styleUrl: './app.component.css',
 })
 export class App {
   private readonly http = inject(HttpClient);
@@ -18,7 +18,9 @@ export class App {
   protected readonly notifications = inject(NotificationService);
   protected readonly apiStatus = signal<'checking' | 'online' | 'offline'>('checking');
   protected readonly menuOpen = signal(false);
-  protected readonly isAdministrator = computed(() => this.auth.currentRoles().includes('Administrator'));
+  protected readonly isAdministrator = computed(() =>
+    this.auth.currentRoles().includes('Administrator'),
+  );
   protected readonly userDisplayName = computed(() => {
     const user = this.auth.currentUser();
     const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ');
@@ -28,7 +30,7 @@ export class App {
   constructor() {
     this.http.get<{ status: string }>(apiEndpoints.health).subscribe({
       next: () => this.apiStatus.set('online'),
-      error: () => this.apiStatus.set('offline')
+      error: () => this.apiStatus.set('offline'),
     });
   }
 

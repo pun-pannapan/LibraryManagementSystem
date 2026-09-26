@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using LibraryManagement.Application.Contracts;
+using LibraryManagement.Domain.Enums;
 
 namespace LibraryManagement.Api.Tests;
 
@@ -84,7 +85,24 @@ public sealed class ApiIntegrationTests
     }
 
     [Fact]
-    public async Task UserCanBorrowAndReturnAvailableBook()
+    public async Task AdministratorCannotBorrowOrViewPersonalBorrowingHistory()
+    {
+        using var factory = new TestApplicationFactory();
+        await factory.SeedAsync();
+        using var client = factory.CreateClient();
+        await AuthorizeAsync(client, "admin@example.com");
+
+        var borrowResponse = await client.PostAsJsonAsync(
+            "/api/v1/borrowings",
+            new BorrowBookRequest(TestApplicationFactory.CleanCodeBookId));
+        var historyResponse = await client.GetAsync("/api/v1/borrowings/me");
+
+        borrowResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        historyResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task UserCanRequestBorrowAndReturnWithAdministratorProcessing()
     {
         using var factory = new TestApplicationFactory();
         await factory.SeedAsync();
@@ -97,10 +115,24 @@ public sealed class ApiIntegrationTests
         var borrowing = await borrowResponse.Content.ReadFromJsonAsync<BorrowTransactionDto>();
         borrowing.Should().NotBeNull();
 
-        var returnResponse = await client.PostAsync($"/api/v1/borrowings/{borrowing!.Id}/return", null);
+        borrowing!.Status.Should().Be(LibraryManagement.Domain.Enums.BorrowTransactionStatus.Requested);
+
+        await AuthorizeAsync(client, "admin@example.com");
+        var assignResponse = await client.PostAsync($"/api/v1/borrowings/{borrowing.Id}/assign", null);
+        assignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await AuthorizeAsync(client, "user@example.com");
+        var returnResponse = await client.PostAsync($"/api/v1/borrowings/{borrowing.Id}/return", null);
 
         returnResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var returned = await returnResponse.Content.ReadFromJsonAsync<BorrowTransactionDto>();
+        var returnRequest = await returnResponse.Content.ReadFromJsonAsync<BorrowTransactionDto>();
+        returnRequest.Should().NotBeNull();
+        returnRequest!.Status.Should().Be(LibraryManagement.Domain.Enums.BorrowTransactionStatus.ReturnRequested);
+
+        await AuthorizeAsync(client, "admin@example.com");
+        var acceptedResponse = await client.PostAsync($"/api/v1/borrowings/{borrowing.Id}/accept-return", null);
+        acceptedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var returned = await acceptedResponse.Content.ReadFromJsonAsync<BorrowTransactionDto>();
         returned.Should().NotBeNull();
         returned!.ReturnedAtUtc.Should().NotBeNull();
     }
@@ -125,6 +157,121 @@ public sealed class ApiIntegrationTests
         var body = await searchResponse.Content.ReadFromJsonAsync<PagedResult<BorrowTransactionDto>>();
         body.Should().NotBeNull();
         body!.Items.Should().ContainSingle(item => item.BookTitle == "Clean Code");
+    }
+
+    [Fact]
+    public async Task UserCannotProcessAdministratorBorrowingActions()
+    {
+        using var factory = new TestApplicationFactory();
+        await factory.SeedAsync();
+        using var client = factory.CreateClient();
+        await AuthorizeAsync(client, "user@example.com");
+        var borrowing = await CreateBorrowRequestAsync(client);
+
+        var assignResponse = await client.PostAsync($"/api/v1/borrowings/{borrowing.Id}/assign", null);
+        var rejectResponse = await client.PostAsync($"/api/v1/borrowings/{borrowing.Id}/reject", null);
+        var acceptReturnResponse = await client.PostAsync($"/api/v1/borrowings/{borrowing.Id}/accept-return", null);
+
+        assignResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        rejectResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        acceptReturnResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task CancellingPendingRequestReleasesBook()
+    {
+        using var factory = new TestApplicationFactory();
+        await factory.SeedAsync();
+        using var client = factory.CreateClient();
+        await AuthorizeAsync(client, "user@example.com");
+        var borrowing = await CreateBorrowRequestAsync(client);
+
+        var cancelResponse = await client.PostAsync($"/api/v1/borrowings/{borrowing.Id}/cancel", null);
+
+        cancelResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var cancelled = await cancelResponse.Content.ReadFromJsonAsync<BorrowTransactionDto>();
+        cancelled!.Status.Should().Be(BorrowTransactionStatus.Cancelled);
+        var book = await client.GetFromJsonAsync<BookDto>($"/api/v1/books/{TestApplicationFactory.CleanCodeBookId}");
+        book!.AvailabilityStatus.Should().Be(BookAvailabilityStatus.Available);
+    }
+
+    [Fact]
+    public async Task RejectingPendingRequestReleasesBook()
+    {
+        using var factory = new TestApplicationFactory();
+        await factory.SeedAsync();
+        using var client = factory.CreateClient();
+        await AuthorizeAsync(client, "user@example.com");
+        var borrowing = await CreateBorrowRequestAsync(client);
+        await AuthorizeAsync(client, "admin@example.com");
+
+        var rejectResponse = await client.PostAsync($"/api/v1/borrowings/{borrowing.Id}/reject", null);
+
+        rejectResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var rejected = await rejectResponse.Content.ReadFromJsonAsync<BorrowTransactionDto>();
+        rejected!.Status.Should().Be(BorrowTransactionStatus.Rejected);
+        var book = await client.GetFromJsonAsync<BookDto>($"/api/v1/books/{TestApplicationFactory.CleanCodeBookId}");
+        book!.AvailabilityStatus.Should().Be(BookAvailabilityStatus.Available);
+    }
+
+    [Fact]
+    public async Task ReturnCannotBeAcceptedBeforeUserRequestsIt()
+    {
+        using var factory = new TestApplicationFactory();
+        await factory.SeedAsync();
+        using var client = factory.CreateClient();
+        await AuthorizeAsync(client, "user@example.com");
+        var borrowing = await CreateBorrowRequestAsync(client);
+        await AuthorizeAsync(client, "admin@example.com");
+        var assignResponse = await client.PostAsync($"/api/v1/borrowings/{borrowing.Id}/assign", null);
+        assignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var acceptReturnResponse = await client.PostAsync($"/api/v1/borrowings/{borrowing.Id}/accept-return", null);
+
+        acceptReturnResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task BookWithPendingRequestCannotBeRequestedAgain()
+    {
+        using var factory = new TestApplicationFactory();
+        await factory.SeedAsync();
+        using var client = factory.CreateClient();
+        await AuthorizeAsync(client, "user@example.com");
+        await CreateBorrowRequestAsync(client);
+
+        var duplicateResponse = await client.PostAsJsonAsync(
+            "/api/v1/borrowings",
+            new BorrowBookRequest(TestApplicationFactory.CleanCodeBookId));
+
+        duplicateResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task UserCannotReturnAnotherUsersBorrowing()
+    {
+        using var factory = new TestApplicationFactory();
+        await factory.SeedAsync();
+        using var client = factory.CreateClient();
+        await AuthorizeAsync(client, "user@example.com");
+        var borrowing = await CreateBorrowRequestAsync(client);
+        await AuthorizeAsync(client, "admin@example.com");
+        var assignResponse = await client.PostAsync($"/api/v1/borrowings/{borrowing.Id}/assign", null);
+        assignResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        await AuthorizeAsync(client, "other@example.com");
+
+        var returnResponse = await client.PostAsync($"/api/v1/borrowings/{borrowing.Id}/return", null);
+
+        returnResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    private static async Task<BorrowTransactionDto> CreateBorrowRequestAsync(HttpClient client)
+    {
+        var response = await client.PostAsJsonAsync(
+            "/api/v1/borrowings",
+            new BorrowBookRequest(TestApplicationFactory.CleanCodeBookId));
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        return (await response.Content.ReadFromJsonAsync<BorrowTransactionDto>())!;
     }
 
     private static async Task AuthorizeAsync(HttpClient client, string email)

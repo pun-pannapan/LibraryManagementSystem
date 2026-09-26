@@ -1,15 +1,30 @@
 <main class="container py-4 py-md-5">
-  <a class="btn btn-link px-0 mb-3" routerLink="/books" queryParamsHandling="preserve">← Back to books</a>
+  <a class="btn btn-link px-0 mb-3" routerLink="/books" queryParamsHandling="preserve"
+    >← Back to books</a
+  >
 
   @if (loading()) {
-    <div class="d-flex align-items-center gap-2 py-5 text-secondary" role="status" aria-live="polite">
+    <div
+      class="d-flex align-items-center gap-2 py-5 text-secondary"
+      role="status"
+      aria-live="polite"
+    >
       <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
       <span>Loading book details…</span>
     </div>
   } @else if (errorMessage(); as message) {
-    <div class="alert d-flex flex-wrap align-items-center justify-content-between gap-3" [class.alert-info]="notFound()" [class.alert-danger]="!notFound()" [attr.role]="notFound() ? 'status' : 'alert'">
+    <div
+      class="alert d-flex flex-wrap align-items-center justify-content-between gap-3"
+      [class.alert-info]="notFound()"
+      [class.alert-danger]="!notFound()"
+      [attr.role]="notFound() ? 'status' : 'alert'"
+    >
       <span>{{ message }}</span>
-      @if (!notFound()) { <button class="btn btn-outline-danger btn-sm" type="button" (click)="reload()">Try again</button> }
+      @if (!notFound()) {
+        <button class="btn btn-outline-danger btn-sm" type="button" (click)="reload()">
+          Try again
+        </button>
+      }
     </div>
   } @else if (book(); as item) {
     @if (borrowError(); as message) {
@@ -19,12 +34,16 @@
       <div class="card-body p-4 p-md-5">
         <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
           <div>
-            <p class="text-uppercase small fw-semibold text-primary mb-2">{{ item.categoryName }}</p>
+            <p class="text-uppercase small fw-semibold text-primary mb-2">
+              {{ item.categoryName }}
+            </p>
             <h1 class="h2 mb-2">{{ item.title }}</h1>
             <p class="lead text-secondary mb-0">by {{ item.author }}</p>
           </div>
           @if (item.availabilityStatus === availableStatus) {
             <span class="badge text-bg-success fs-6">Available</span>
+          } @else if (item.availabilityStatus === reservedStatus) {
+            <span class="badge text-bg-warning fs-6">Reserved</span>
           } @else {
             <span class="badge text-bg-secondary fs-6">Borrowed</span>
           }
@@ -47,9 +66,19 @@
             <dt>Category</dt>
             <dd>{{ item.categoryName }}</dd>
           </div>
+          <div class="col-12 col-md-6">
+            <dt>Shelf</dt>
+            <dd>{{ item.shelfCode || '-' }}</dd>
+          </div>
+          <div class="col-12 col-md-6">
+            <dt>Location</dt>
+            <dd>{{ item.location || '-' }}</dd>
+          </div>
         </dl>
 
-        @if (confirmingBorrow()) {
+        @if (isAdministrator().includes('Administrator')) {
+          <p class="text-secondary mb-0">Administrators manage borrowing requests.</p>
+        } @else if (confirmingBorrow()) {
           <app-borrow-confirm-panel
             [bookTitle]="item.title"
             [busy]="isBorrowing()"
@@ -58,7 +87,12 @@
             (cancel)="cancelBorrow()"
           />
         } @else {
-          <button class="btn btn-primary" type="button" [disabled]="item.availabilityStatus !== availableStatus" (click)="requestBorrow()">
+          <button
+            class="btn btn-primary"
+            type="button"
+            [disabled]="item.availabilityStatus !== availableStatus"
+            (click)="requestBorrow()"
+          >
             Borrow
           </button>
         }

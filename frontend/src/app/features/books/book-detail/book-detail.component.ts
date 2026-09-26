@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 import { catchError, combineLatest, finalize, map, of, startWith, Subject, switchMap } from 'rxjs';
 import { ApiErrorService } from '../../../core/http/api-error.service';
+import { AuthService } from '../../../core/auth/auth.service';
 import { NotificationService } from '../../../core/notifications/notification.service';
 import { BookAvailabilityStatus, BookDetail } from '../../../shared/models/book.models';
 import { BorrowConfirmPanelComponent } from '../../../shared/components/borrow-confirm-panel/borrow-confirm-panel.component';
@@ -18,6 +19,7 @@ import { BooksApiService } from '../books-api.service';
   styleUrl: './book-detail.component.css',
 })
 export class BookDetailComponent implements OnInit {
+  private readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly booksApi = inject(BooksApiService);
   private readonly apiErrors = inject(ApiErrorService);
@@ -31,6 +33,8 @@ export class BookDetailComponent implements OnInit {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly notFound = signal(false);
   protected readonly availableStatus = BookAvailabilityStatus.Available;
+  protected readonly isAdministrator = this.auth.currentRoles;
+  protected readonly reservedStatus = BookAvailabilityStatus.Reserved;
   protected readonly confirmingBorrow = signal(false);
   protected readonly isBorrowing = signal(false);
   protected readonly borrowError = signal<string | null>(null);
@@ -105,7 +109,7 @@ export class BookDetailComponent implements OnInit {
       .subscribe({
         next: () => {
           this.confirmingBorrow.set(false);
-          this.notifications.show('success', `“${item.title}” was borrowed successfully.`);
+          this.notifications.show('success', `Borrow request submitted for “${item.title}”.`);
           this.reload();
         },
         error: (error: unknown) => {

@@ -17,13 +17,20 @@ import {
 import { ApiErrorService } from '../../../core/http/api-error.service';
 import { NotificationService } from '../../../core/notifications/notification.service';
 import { PagedResult } from '../../../shared/models/api.models';
-import { BookAvailabilityStatus, BookSummary } from '../../../shared/models/book.models';
+import {
+  BOOK_SORT_FIELDS,
+  BookAvailabilityStatus,
+  BookSearchRequest,
+  BookSummary,
+} from '../../../shared/models/book.models';
 import { BooksApiService } from '../../books/books-api.service';
 import { DeleteConfirmPanelComponent } from '../../../shared/components/delete-confirm-panel/delete-confirm-panel.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 
 interface AdminBooksQuery {
   search?: string;
+  sortBy: NonNullable<BookSearchRequest['sortBy']>;
+  sortDirection: NonNullable<BookSearchRequest['sortDirection']>;
   page: number;
   pageSize: number;
 }
@@ -42,14 +49,22 @@ export class AdminBooksComponent implements OnInit {
   private readonly notifications = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly refreshRequests = new Subject<void>();
+  private routeSearch = '';
 
   protected readonly searchControl = new FormControl('', { nonNullable: true });
   protected readonly books = signal<BookSummary[]>([]);
   protected readonly result = signal<PagedResult<BookSummary> | null>(null);
-  protected readonly query = signal<AdminBooksQuery>({ page: 1, pageSize: 20 });
+  protected readonly sortActivated = signal(false);
+  protected readonly query = signal<AdminBooksQuery>({
+    sortBy: 'title',
+    sortDirection: 'asc',
+    page: 1,
+    pageSize: 10,
+  });
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly availableStatus = BookAvailabilityStatus.Available;
+  protected readonly reservedStatus = BookAvailabilityStatus.Reserved;
   protected readonly pendingDeleteId = signal<string | null>(null);
   protected readonly isDeleting = signal(false);
   protected readonly deleteError = signal<string | null>(null);
@@ -60,7 +75,11 @@ export class AdminBooksComponent implements OnInit {
         map(([params]) => this.readQuery(params)),
         tap((query) => {
           this.query.set(query);
-          this.searchControl.setValue(query.search ?? '', { emitEvent: false });
+          const nextRouteSearch = query.search ?? '';
+          if (nextRouteSearch !== this.routeSearch) {
+            this.searchControl.setValue(query.search ?? '', { emitEvent: false });
+            this.routeSearch = nextRouteSearch;
+          }
           this.errorMessage.set(null);
         }),
         switchMap((query) => {
@@ -70,8 +89,8 @@ export class AdminBooksComponent implements OnInit {
               search: query.search,
               page: query.page,
               pageSize: query.pageSize,
-              sortBy: 'title',
-              sortDirection: 'asc',
+              sortBy: query.sortBy,
+              sortDirection: query.sortDirection,
             })
             .pipe(
               map((result) => ({ result, error: null })),
@@ -94,11 +113,30 @@ export class AdminBooksComponent implements OnInit {
   }
 
   protected search(): void {
-    void this.navigate({
+    const query = {
+      ...this.query(),
       search: this.searchControl.value.trim() || undefined,
       page: 1,
-      pageSize: this.query().pageSize,
-    });
+    };
+    void this.navigate(query);
+  }
+
+  protected sortByColumn(sortBy: AdminBooksQuery['sortBy']): void {
+    this.sortActivated.set(true);
+    const current = this.query();
+    const sortDirection =
+      current.sortBy === sortBy && current.sortDirection === 'asc' ? 'desc' : 'asc';
+    void this.navigate({ ...current, sortBy, sortDirection, page: 1 });
+  }
+
+  protected sortIndicator(sortBy: AdminBooksQuery['sortBy']): string {
+    if (!this.sortActivated() || this.query().sortBy !== sortBy) return '';
+    return this.query().sortDirection === 'asc' ? '↑' : '↓';
+  }
+
+  protected changePageSize(value: string): void {
+    const pageSize = Number(value);
+    if ([10, 20, 50].includes(pageSize)) void this.navigate({ ...this.query(), page: 1, pageSize });
   }
 
   protected goToPage(page: number): void {
@@ -178,8 +216,12 @@ export class AdminBooksComponent implements OnInit {
     const pageSize = Number(params.get('pageSize'));
     return {
       search: params.get('search') || undefined,
+      sortBy: BOOK_SORT_FIELDS.includes(params.get('sortBy') as AdminBooksQuery['sortBy'])
+        ? (params.get('sortBy') as AdminBooksQuery['sortBy'])
+        : 'title',
+      sortDirection: params.get('sortDirection') === 'desc' ? 'desc' : 'asc',
       page: Number.isInteger(page) && page > 0 ? page : 1,
-      pageSize: [10, 20, 50].includes(pageSize) ? pageSize : 20,
+      pageSize: [10, 20, 50].includes(pageSize) ? pageSize : 10,
     };
   }
 
@@ -188,6 +230,8 @@ export class AdminBooksComponent implements OnInit {
       relativeTo: this.route,
       queryParams: {
         search: query.search ?? null,
+        sortBy: query.sortBy,
+        sortDirection: query.sortDirection,
         page: query.page,
         pageSize: query.pageSize,
       },

@@ -13,7 +13,8 @@ describe('application route policy', () => {
     expect(login?.canActivate).toBeUndefined();
     expect(books?.canActivate).toContain(authGuard);
     expect(detail?.canActivate).toContain(authGuard);
-    expect(borrowings?.canActivate).toContain(authGuard);
+    expect(borrowings?.canActivate).toEqual([authGuard, roleGuard]);
+    expect(borrowings?.data?.['roles']).toEqual(['User']);
   });
 
   it('protects every administrator child route and exposes the recommended paths', () => {
@@ -21,9 +22,9 @@ describe('application route policy', () => {
     expect(admin?.canActivate).toEqual([authGuard, roleGuard]);
     expect(admin?.canActivateChild).toContain(roleGuard);
     expect(admin?.data?.['roles']).toEqual(['Administrator']);
-    expect(admin?.children?.map((route) => route.path)).toEqual(expect.arrayContaining([
-      'books', 'books/new', 'books/:id/edit', 'transactions',
-    ]));
+    expect(admin?.children?.map((route) => route.path)).toEqual(
+      expect.arrayContaining(['books', 'books/new', 'books/:id/edit', 'transactions']),
+    );
 
     const forbidden = routes.find((route) => route.path === 'forbidden');
     const notFound = routes.find((route) => route.path === 'not-found');

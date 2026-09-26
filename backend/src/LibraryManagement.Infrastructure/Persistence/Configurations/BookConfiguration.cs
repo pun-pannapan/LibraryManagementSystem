@@ -12,6 +12,8 @@ public sealed class BookConfiguration : IEntityTypeConfiguration<Book>
         builder.Property(book => book.Title).HasMaxLength(250).IsRequired();
         builder.Property(book => book.Author).HasMaxLength(200).IsRequired();
         builder.Property(book => book.Publisher).HasMaxLength(200);
+        builder.Property(book => book.ShelfCode).HasMaxLength(50);
+        builder.Property(book => book.Location).HasMaxLength(150);
         builder.Property(book => book.AvailabilityStatus).IsRequired();
         builder.Property(book => book.CreatedAtUtc).IsRequired();
         builder.Property(book => book.UpdatedAtUtc).IsRequired();
@@ -22,6 +24,7 @@ public sealed class BookConfiguration : IEntityTypeConfiguration<Book>
         builder.HasIndex(book => book.Author);
         builder.HasIndex(book => book.CategoryId);
         builder.HasIndex(book => book.AvailabilityStatus);
+        builder.HasIndex(book => book.ShelfCode);
 
         builder.HasOne(book => book.Category)
             .WithMany(category => category.Books)

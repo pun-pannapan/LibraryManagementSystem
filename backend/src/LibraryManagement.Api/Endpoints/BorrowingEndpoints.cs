@@ -26,13 +26,15 @@ public static class BorrowingEndpoints
             .WithTags("Borrowings");
 
         group.MapPost("/", BorrowBookAsync)
+            .RequireAuthorization(policy => policy.RequireRole(ApplicationRoles.User))
             .Produces<BorrowTransactionDto>(StatusCodes.Status201Created)
             .ProducesValidationProblem()
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status409Conflict);
 
-        group.MapPost("/{id:guid}/return", ReturnBookAsync)
+        group.MapPost("/{id:guid}/return", RequestReturnAsync)
+            .RequireAuthorization(policy => policy.RequireRole(ApplicationRoles.User))
             .Produces<BorrowTransactionDto>()
             .ProducesValidationProblem()
             .Produces(StatusCodes.Status401Unauthorized)
@@ -40,7 +42,49 @@ public static class BorrowingEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status409Conflict);
 
+        group.MapPost("/{id:guid}/request-return", RequestReturnAsync)
+            .RequireAuthorization(policy => policy.RequireRole(ApplicationRoles.User))
+            .Produces<BorrowTransactionDto>()
+            .ProducesValidationProblem()
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        group.MapPost("/{id:guid}/cancel", CancelBorrowRequestAsync)
+            .RequireAuthorization(policy => policy.RequireRole(ApplicationRoles.User))
+            .Produces<BorrowTransactionDto>()
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        group.MapPost("/{id:guid}/assign", AssignBorrowingAsync)
+            .RequireAuthorization(policy => policy.RequireRole(ApplicationRoles.Administrator))
+            .Produces<BorrowTransactionDto>()
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        group.MapPost("/{id:guid}/reject", RejectBorrowingAsync)
+            .RequireAuthorization(policy => policy.RequireRole(ApplicationRoles.Administrator))
+            .Produces<BorrowTransactionDto>()
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
+        group.MapPost("/{id:guid}/accept-return", AcceptReturnAsync)
+            .RequireAuthorization(policy => policy.RequireRole(ApplicationRoles.Administrator))
+            .Produces<BorrowTransactionDto>()
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
         group.MapGet("/me", GetMyHistoryAsync)
+            .RequireAuthorization(policy => policy.RequireRole(ApplicationRoles.User))
             .Produces<PagedResult<BorrowTransactionDto>>()
             .ProducesValidationProblem()
             .Produces(StatusCodes.Status401Unauthorized);
@@ -95,11 +139,14 @@ public static class BorrowingEndpoints
             if (book.AvailabilityStatus != BookAvailabilityStatus.Available)
             {
                 logger.LogInformation("Borrow conflict for book {BookId} because status is {Status}", request.BookId, book.AvailabilityStatus);
-                return Results.Conflict(new { message = "The selected book is already borrowed." });
+                return Results.Conflict(new { message = "The selected book is not available for a borrow request." });
             }
 
             var hasActiveBorrowing = await dbContext.BorrowTransactions.AnyAsync(
-                item => item.BookId == request.BookId && item.Status == BorrowTransactionStatus.Borrowed,
+                item => item.BookId == request.BookId
+                    && (item.Status == BorrowTransactionStatus.Requested
+                        || item.Status == BorrowTransactionStatus.Borrowed
+                        || item.Status == BorrowTransactionStatus.ReturnRequested),
                 cancellationToken);
 
             if (hasActiveBorrowing)
@@ -113,12 +160,11 @@ public static class BorrowingEndpoints
             {
                 BookId = request.BookId,
                 UserId = userId,
-                BorrowedAtUtc = now,
-                DueAtUtc = now.AddDays(14),
-                Status = BorrowTransactionStatus.Borrowed
+                RequestedAtUtc = now,
+                Status = BorrowTransactionStatus.Requested
             };
 
-            book.AvailabilityStatus = BookAvailabilityStatus.Borrowed;
+            book.AvailabilityStatus = BookAvailabilityStatus.Reserved;
             dbContext.BorrowTransactions.Add(borrowing);
 
             try
@@ -129,17 +175,17 @@ public static class BorrowingEndpoints
             catch (DbUpdateConcurrencyException)
             {
                 logger.LogInformation("Concurrency conflict while borrowing book {BookId}", request.BookId);
-                return Results.Conflict(new { message = "The selected book was borrowed by another request." });
+                return Results.Conflict(new { message = "The selected book was requested by another user." });
             }
 
             var created = await LoadTransactionAsync(dbContext, borrowing.Id, cancellationToken);
             var borrowerEmail = await GetUserEmailAsync(dbContext, borrowing.UserId, cancellationToken);
-            logger.LogInformation("Borrowing {BorrowingId} created for book {BookId} by user {UserId}", borrowing.Id, borrowing.BookId, borrowing.UserId);
+            logger.LogInformation("Borrow request {BorrowingId} created for book {BookId} by user {UserId}", borrowing.Id, borrowing.BookId, borrowing.UserId);
             return Results.Created($"/api/v1/borrowings/{borrowing.Id}", EndpointHelpers.ToDto(created!, borrowerEmail));
         });
     }
 
-    private static async Task<IResult> ReturnBookAsync(
+    private static async Task<IResult> RequestReturnAsync(
         Guid id,
         HttpContext context,
         ApplicationDbContext dbContext,
@@ -161,7 +207,6 @@ public static class BorrowingEndpoints
             return Results.Unauthorized();
         }
 
-        var isAdmin = context.User.IsInRole(ApplicationRoles.Administrator);
         logger.LogInformation("Return attempt for borrowing {BorrowingId} by user {UserId}", id, userId);
 
         var strategy = dbContext.Database.CreateExecutionStrategy();
@@ -179,21 +224,20 @@ public static class BorrowingEndpoints
                 return Results.NotFound();
             }
 
-            if (!isAdmin && borrowing.UserId != userId)
+            if (borrowing.UserId != userId)
             {
                 logger.LogInformation("Return forbidden for borrowing {BorrowingId} by user {UserId}", id, userId);
                 return Results.Forbid();
             }
 
-            if (borrowing.Status == BorrowTransactionStatus.Returned)
+            if (borrowing.Status != BorrowTransactionStatus.Borrowed)
             {
-                logger.LogInformation("Return conflict for borrowing {BorrowingId} because it is already returned", id);
-                return Results.Conflict(new { message = "This borrowing has already been returned." });
+                logger.LogInformation("Return conflict for borrowing {BorrowingId} because status is {Status}", id, borrowing.Status);
+                return Results.Conflict(new { message = "Only an active borrowed item can request a return." });
             }
 
-            borrowing.ReturnedAtUtc = DateTime.UtcNow;
-            borrowing.Status = BorrowTransactionStatus.Returned;
-            borrowing.Book.AvailabilityStatus = BookAvailabilityStatus.Available;
+            borrowing.ReturnRequestedAtUtc = DateTime.UtcNow;
+            borrowing.Status = BorrowTransactionStatus.ReturnRequested;
 
             try
             {
@@ -207,9 +251,157 @@ public static class BorrowingEndpoints
             }
 
             var borrowerEmail = await GetUserEmailAsync(dbContext, borrowing.UserId, cancellationToken);
-            logger.LogInformation("Borrowing {BorrowingId} returned for book {BookId}", borrowing.Id, borrowing.BookId);
+            logger.LogInformation("Return requested for borrowing {BorrowingId} and book {BookId}", borrowing.Id, borrowing.BookId);
             return Results.Ok(EndpointHelpers.ToDto(borrowing, borrowerEmail));
         });
+    }
+
+    private static async Task<IResult> CancelBorrowRequestAsync(
+        Guid id,
+        HttpContext context,
+        ApplicationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        if (!EndpointHelpers.TryGetUserId(context.User, out var userId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var borrowing = await dbContext.BorrowTransactions
+            .Include(item => item.Book)
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+
+        if (borrowing is null) return Results.NotFound();
+        if (borrowing.UserId != userId) return Results.Forbid();
+        if (borrowing.Status != BorrowTransactionStatus.Requested)
+            return Results.Conflict(new { message = "Only a pending borrow request can be cancelled." });
+
+        borrowing.Status = BorrowTransactionStatus.Cancelled;
+        borrowing.CancelledAtUtc = DateTime.UtcNow;
+        borrowing.Book.AvailabilityStatus = BookAvailabilityStatus.Available;
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Results.Conflict(new { message = "This borrow request was modified by another request." });
+        }
+        return Results.Ok(EndpointHelpers.ToDto(
+            borrowing,
+            await GetUserEmailAsync(dbContext, borrowing.UserId, cancellationToken)));
+    }
+
+    private static async Task<IResult> AssignBorrowingAsync(
+        Guid id,
+        HttpContext context,
+        ApplicationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        if (!EndpointHelpers.TryGetUserId(context.User, out var administratorId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var borrowing = await dbContext.BorrowTransactions
+            .Include(item => item.Book)
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+
+        if (borrowing is null) return Results.NotFound();
+        if (borrowing.Status != BorrowTransactionStatus.Requested
+            || borrowing.Book.AvailabilityStatus != BookAvailabilityStatus.Reserved)
+            return Results.Conflict(new { message = "Only a pending request can be assigned." });
+
+        var now = DateTime.UtcNow;
+        borrowing.Status = BorrowTransactionStatus.Borrowed;
+        borrowing.BorrowedAtUtc = now;
+        borrowing.AssignedAtUtc = now;
+        borrowing.AssignedByUserId = administratorId;
+        borrowing.DueAtUtc = now.AddDays(14);
+        borrowing.Book.AvailabilityStatus = BookAvailabilityStatus.Borrowed;
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Results.Conflict(new { message = "This borrow request was modified by another administrator." });
+        }
+        return Results.Ok(EndpointHelpers.ToDto(
+            borrowing,
+            await GetUserEmailAsync(dbContext, borrowing.UserId, cancellationToken)));
+    }
+
+    private static async Task<IResult> RejectBorrowingAsync(
+        Guid id,
+        HttpContext context,
+        ApplicationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        if (!EndpointHelpers.TryGetUserId(context.User, out var administratorId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var borrowing = await dbContext.BorrowTransactions
+            .Include(item => item.Book)
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+
+        if (borrowing is null) return Results.NotFound();
+        if (borrowing.Status != BorrowTransactionStatus.Requested)
+            return Results.Conflict(new { message = "Only a pending request can be rejected." });
+
+        borrowing.Status = BorrowTransactionStatus.Rejected;
+        borrowing.RejectedAtUtc = DateTime.UtcNow;
+        borrowing.RejectedByUserId = administratorId;
+        borrowing.Book.AvailabilityStatus = BookAvailabilityStatus.Available;
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Results.Conflict(new { message = "This borrow request was modified by another administrator." });
+        }
+        return Results.Ok(EndpointHelpers.ToDto(
+            borrowing,
+            await GetUserEmailAsync(dbContext, borrowing.UserId, cancellationToken)));
+    }
+
+    private static async Task<IResult> AcceptReturnAsync(
+        Guid id,
+        HttpContext context,
+        ApplicationDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        if (!EndpointHelpers.TryGetUserId(context.User, out var administratorId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var borrowing = await dbContext.BorrowTransactions
+            .Include(item => item.Book)
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+
+        if (borrowing is null) return Results.NotFound();
+        if (borrowing.Status != BorrowTransactionStatus.ReturnRequested)
+            return Results.Conflict(new { message = "Only a pending return can be accepted." });
+
+        borrowing.Status = BorrowTransactionStatus.Returned;
+        borrowing.ReturnedAtUtc = DateTime.UtcNow;
+        borrowing.ProcessedByUserId = administratorId;
+        borrowing.Book.AvailabilityStatus = BookAvailabilityStatus.Available;
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Results.Conflict(new { message = "This return request was modified by another administrator." });
+        }
+        return Results.Ok(EndpointHelpers.ToDto(
+            borrowing,
+            await GetUserEmailAsync(dbContext, borrowing.UserId, cancellationToken)));
     }
 
     private static async Task<IResult> GetMyHistoryAsync(
@@ -340,7 +532,15 @@ public static class BorrowingEndpoints
                 item.BorrowedAtUtc,
                 item.DueAtUtc,
                 item.ReturnedAtUtc,
-                item.Status))
+                item.Status,
+                item.RequestedAtUtc,
+                item.AssignedAtUtc,
+                item.ReturnRequestedAtUtc,
+                item.AssignedByUserId,
+                item.ProcessedByUserId,
+                item.RejectedAtUtc,
+                item.RejectedByUserId,
+                item.CancelledAtUtc))
             .ToListAsync(cancellationToken);
 
         return Results.Ok(new PagedResult<BorrowTransactionDto>(
@@ -355,13 +555,13 @@ public static class BorrowingEndpoints
     {
         if (string.IsNullOrWhiteSpace(sort))
         {
-            return "-borrowedat";
+            return $"-{BorrowingHistorySortFields.RequestedAt}";
         }
 
         var normalized = sort.Trim().ToLowerInvariant();
-        return normalized.TrimStart('-') is "borrowedat" or "dueat" or "returnedat" or "status"
+        return BorrowingHistorySortFields.All.Contains(normalized.TrimStart('-'))
             ? normalized
-            : "-borrowedat";
+            : $"-{BorrowingHistorySortFields.RequestedAt}";
     }
 
     private static IQueryable<BorrowTransaction> ApplyHistorySorting(
@@ -373,18 +573,27 @@ public static class BorrowingEndpoints
 
         return field switch
         {
-            "dueat" => descending
-                ? query.OrderByDescending(item => item.DueAtUtc)
-                : query.OrderBy(item => item.DueAtUtc),
-            "returnedat" => descending
-                ? query.OrderByDescending(item => item.ReturnedAtUtc)
-                : query.OrderBy(item => item.ReturnedAtUtc),
-            "status" => descending
-                ? query.OrderByDescending(item => item.Status)
-                : query.OrderBy(item => item.Status),
+            BorrowingHistorySortFields.RequestedAt => descending
+                ? query.OrderByDescending(item => item.RequestedAtUtc).ThenByDescending(item => item.Id)
+                : query.OrderBy(item => item.RequestedAtUtc).ThenBy(item => item.Id),
+            BorrowingHistorySortFields.AssignedAt => descending
+                ? query.OrderByDescending(item => item.AssignedAtUtc).ThenByDescending(item => item.Id)
+                : query.OrderBy(item => item.AssignedAtUtc).ThenBy(item => item.Id),
+            BorrowingHistorySortFields.ReturnRequestedAt => descending
+                ? query.OrderByDescending(item => item.ReturnRequestedAtUtc).ThenByDescending(item => item.Id)
+                : query.OrderBy(item => item.ReturnRequestedAtUtc).ThenBy(item => item.Id),
+            BorrowingHistorySortFields.DueAt => descending
+                ? query.OrderByDescending(item => item.DueAtUtc).ThenByDescending(item => item.Id)
+                : query.OrderBy(item => item.DueAtUtc).ThenBy(item => item.Id),
+            BorrowingHistorySortFields.ReturnedAt => descending
+                ? query.OrderByDescending(item => item.ReturnedAtUtc).ThenByDescending(item => item.Id)
+                : query.OrderBy(item => item.ReturnedAtUtc).ThenBy(item => item.Id),
+            BorrowingHistorySortFields.Status => descending
+                ? query.OrderByDescending(item => item.Status).ThenByDescending(item => item.Id)
+                : query.OrderBy(item => item.Status).ThenBy(item => item.Id),
             _ => descending
-                ? query.OrderByDescending(item => item.BorrowedAtUtc)
-                : query.OrderBy(item => item.BorrowedAtUtc)
+                ? query.OrderByDescending(item => item.BorrowedAtUtc).ThenByDescending(item => item.Id)
+                : query.OrderBy(item => item.BorrowedAtUtc).ThenBy(item => item.Id)
         };
     }
 
