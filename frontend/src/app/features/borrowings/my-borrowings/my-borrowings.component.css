@@ -1,0 +1,7 @@
+.filter-control {
+  width: min(100%, 12rem);
+}
+
+.empty-state {
+  border-style: dashed !important;
+}

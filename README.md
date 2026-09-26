@@ -5,8 +5,8 @@ A library management application built with ASP.NET Core 8, Angular 21, and SQL 
 ## Prerequisites
 
 - Docker Desktop with WSL2 backend and Linux containers enabled
-- .NET 8 SDK, only if you want to run backend tests or EF commands from the host
-- Node.js 22.12 or newer in the Node 22 release line, only if you want to run frontend tests from the host
+- .NET 8 SDK, if you want to build, test, or run EF commands for the backend from the host
+- Node.js 22.12 or newer in the Node 22 release line, if you want to build, test, or run the frontend from the host
 
 ## Run Locally
 
@@ -20,7 +20,9 @@ Copy-Item .env.example .env
 
 Edit `.env` before starting the stack. Replace the example SQL Server passwords, JWT key, and seed user passwords.
 
-Start the application:
+### Build and start the full solution with Docker
+
+Build all images and start the database, backend API, and frontend:
 
 ```powershell
 docker compose up --build -d
@@ -44,6 +46,39 @@ docker compose down
 ```
 
 This stops containers but keeps the SQL Server volume.
+
+### Build from the host
+
+Use these commands when you want to verify or develop the backend and frontend outside their containers. Run them from the repository root.
+
+Build the .NET solution:
+
+```powershell
+dotnet restore backend/LibraryManagement.sln
+dotnet build backend/LibraryManagement.sln --configuration Release
+```
+
+Install dependencies and build the Angular frontend:
+
+```powershell
+npm --prefix frontend ci
+npm --prefix frontend run build
+```
+
+Build both Docker images without starting them:
+
+```powershell
+docker compose build
+```
+
+To run the frontend with the Angular development server while the database and API stay in Docker:
+
+```powershell
+docker compose up --build -d db api
+npm --prefix frontend start
+```
+
+Open <http://localhost:4200>. The development server proxies `/api/**` to the API at `http://127.0.0.1:8080`.
 
 ## Configuration
 
@@ -105,6 +140,62 @@ GET /api/v1/health
 ```
 
 Book create, update, delete, and full borrowing history require an administrator token.
+
+## Frontend manual test guide
+
+Run this browser checklist first, after `docker compose up --build -d` has started the database, API, and web containers. Use the email and password values configured in `.env`.
+
+### 1. Check the frontend is reachable
+
+- Open <http://localhost:4200>.
+- Confirm the Login page is displayed.
+- Open browser DevTools → Network and keep it open while testing.
+
+### 2. Test login validation
+
+- Submit the Login form with both fields empty; required-field messages should appear and no API request should be sent.
+- Enter an invalid email; the email validation message should appear before submission.
+- Enter a valid email with the wrong password; the page should stay on `/login` and show an incorrect-credentials message.
+
+### 3. Test User
+
+Use the account configured by `SEED_USER_EMAIL` and `SEED_USER_PASSWORD` in `.env`.
+
+- Login successfully and confirm that `/books` opens.
+- Open a book detail page.
+- Borrow an available book.
+- Open `/my-borrowings` and confirm the borrowing appears.
+- Return the book.
+- Confirm the transaction status changes to `Returned`.
+- Confirm that administrator links are not visible.
+
+### 4. Test Administrator
+
+Use the account configured by `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `.env`.
+
+- Login successfully and open `/admin/books`.
+- Create a book, edit it, and delete it.
+- Confirm that required-field, whitespace-only, invalid-year, and missing-category validation prevents invalid submissions.
+- Open `/admin/transactions`.
+- Test status, date, pagination, and other available filters.
+
+### 5. Check frontend-to-backend requests
+
+In DevTools → Network, confirm that:
+
+- Login calls `POST /api/v1/auth/login` and returns `200`.
+- The book list calls `/api/v1/books`.
+- Categories call `/api/v1/categories`.
+- Authenticated requests include `Authorization: Bearer ...`.
+- Unexpected `401` or `403` responses do not occur.
+
+### 6. Check logs when a test fails
+
+```powershell
+docker compose logs --tail=100 api
+docker compose logs --tail=100 web
+docker compose logs --tail=100 db
+```
 
 ## Backend API Test Guide
 
@@ -389,18 +480,108 @@ dotnet tool run dotnet-ef migrations add MigrationName --project backend/src/Lib
 
 ## Tests
 
-Run backend tests:
+Run backend restore, build, and tests:
 
 ```powershell
+dotnet restore backend/LibraryManagement.sln
+dotnet build backend/LibraryManagement.sln --configuration Release
 dotnet test backend/LibraryManagement.sln
 ```
 
-Run frontend tests:
+Run frontend tests and a production build:
 
 ```powershell
 npm --prefix frontend ci
 npm --prefix frontend test -- --watch=false
+npm --prefix frontend run build
 ```
+
+Run all automated checks before opening a pull request:
+
+```powershell
+dotnet test backend/LibraryManagement.sln
+npm --prefix frontend test -- --watch=false
+docker compose build
+```
+
+## Frontend
+
+The frontend is a standalone Angular 21 application using Angular Router, Bootstrap 5, Signals, RxJS, Reactive Forms, and Vitest. Its API base URL is `/api/v1`; the Angular development server proxies `/api/**` to the local backend.
+
+Main frontend routes:
+
+- `/login` — sign in
+- `/books` and `/books/:id` — browse books and view details
+- `/my-borrowings` — view and return personal borrowings
+- `/admin/books`, `/admin/books/new`, `/admin/books/:id/edit` — administrator inventory
+- `/admin/transactions` — administrator transaction history
+- `/forbidden` and `/not-found` — access and route fallback pages
+
+## AI Usage
+
+AI was used as a development assistant for reviewing, testing, and documenting this project. All generated suggestions were checked against the source code, API contracts, build output, and automated tests before being kept.
+
+The following recommended prompts describe the types of assistance used during implementation. Replace the placeholder context with the relevant files, code, logs, or API contract before sending a prompt.
+
+1. **Docker environment review**
+
+   **ภาษาไทย**
+
+   > ช่วยตรวจสอบ Dockerfile และ Docker Compose configuration นี้ว่าใช้สร้าง environment ที่มี database, backend และ frontend ได้ครบตามที่กำหนดหรือไม่ พร้อมบอกจุดที่ควรแก้ไขและวิธีทดสอบ
+
+   **English**
+
+   > Review this Dockerfile and Docker Compose configuration. Verify that it creates the required database, backend, and frontend environment, then identify any issues, recommend specific improvements, and provide verification steps.
+
+2. **Code review**
+
+   **ภาษาไทย**
+
+   > ช่วยรีวิวโค้ดส่วนที่เปลี่ยนแปลงนี้ ตรวจหาจุดที่ควรปรับปรุงด้านความถูกต้อง ความปลอดภัย ความอ่านง่าย การจัดการ error และการดูแลต่อ พร้อมเสนอ patch ที่เหมาะสม
+
+   **English**
+
+   > Review the following code changes for correctness, security, readability, error handling, maintainability, and consistency with the existing project. Explain each finding, prioritize the risks, and propose a focused patch where appropriate.
+
+3. **Backend API unit tests**
+
+   **ภาษาไทย**
+
+   > ช่วยเขียน unit test และ integration test สำหรับ backend API ตามการใช้งานจริง ครอบคลุมกรณีสำเร็จ validation error, authentication, authorization, not found, conflict และกรณีข้อมูลไม่ถูกต้อง
+
+   **English**
+
+   > Write unit and integration tests for this backend API based on its actual behavior and API contract. Cover successful requests, validation errors, authentication, authorization, not-found responses, conflicts, malformed input, and important edge cases.
+
+4. **Authentication token troubleshooting**
+
+   **ภาษาไทย**
+
+   > ช่วยตรวจสอบปัญหา auth token ตั้งแต่การ login, การเก็บ session, การแนบ Bearer token ใน request, token หมดอายุ, การตอบกลับ 401/403 และการ redirect ของ frontend พร้อมแนะนำวิธีแก้และวิธีทดสอบ
+
+   **English**
+
+   > Investigate this authentication-token issue end to end: login, session storage, Bearer-token attachment, token expiry, 401/403 responses, route guards, and frontend redirects. Identify the root cause, recommend the smallest safe fix, and add verification steps or regression tests.
+
+5. **Backend and frontend test cases**
+
+   **ภาษาไทย**
+
+   > ช่วยเขียน test case สำหรับ backend API และ frontend จาก feature ที่มีอยู่ โดยระบุขั้นตอนทดสอบ ข้อมูลที่ใช้ ผลลัพธ์ที่คาดหวัง และกรณีผิดพลาด เพื่อใส่ไว้ใน README
+
+   **English**
+
+   > Create manual test cases for this backend API and frontend feature. For each case, include prerequisites, test data, exact steps, expected results, negative cases, and cleanup notes so the checklist can be added to the README.
+
+6. **Error investigation**
+
+   **ภาษาไทย**
+
+   > Error นี้เกิดจากอะไร ช่วยวิเคราะห์จากข้อความ error, stack trace และโค้ดที่เกี่ยวข้อง พร้อมอธิบายสาเหตุ วิธีแก้ไขที่เหมาะสม และ test ที่ควรเพิ่มเพื่อป้องกันไม่ให้เกิดซ้ำ
+
+   **English**
+
+   > Analyze this error using the error message, stack trace, relevant source code, and runtime context. Explain the root cause, distinguish confirmed facts from assumptions, propose the safest fix, and recommend a regression test to prevent the problem from returning.
 
 ## Logs and Health
 

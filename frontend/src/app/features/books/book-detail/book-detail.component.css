@@ -1,0 +1,12 @@
+.book-details dt {
+  margin-bottom: 0.25rem;
+  color: #657381;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.book-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

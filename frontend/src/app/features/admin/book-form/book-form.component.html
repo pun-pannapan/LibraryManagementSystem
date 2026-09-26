@@ -1,0 +1,188 @@
+<main class="container py-4 py-md-5">
+  <a class="btn btn-link px-0 mb-3" routerLink="/admin/books">← Back to inventory</a>
+  <div class="mb-4">
+    <p class="text-uppercase small fw-semibold text-primary mb-2">Administrator</p>
+    <h1 class="h2 mb-1">{{ isEdit ? 'Edit Book' : 'Add Book' }}</h1>
+    <p class="text-secondary mb-0">
+      {{ isEdit ? 'Update the book details.' : 'Add a book to the library inventory.' }}
+    </p>
+  </div>
+
+  @if (isLoadingBook()) {
+    <div
+      class="d-flex align-items-center gap-2 py-5 text-secondary"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+      <span>Loading book…</span>
+    </div>
+  } @else if (loadError(); as message) {
+    <div
+      class="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-3"
+      role="alert"
+    >
+      <span>{{ message }}</span>
+      @if (isEdit) {
+        <button class="btn btn-outline-danger btn-sm" type="button" (click)="reloadBook()">
+          Try again
+        </button>
+      }
+    </div>
+  }
+
+  @if (formError(); as message) {
+    <div
+      class="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-3"
+      role="alert"
+    >
+      <span>{{ message }}</span>
+      @if (needsReload()) {
+        <button class="btn btn-outline-danger btn-sm" type="button" (click)="reloadBook()">
+          Reload latest version
+        </button>
+      }
+    </div>
+  }
+
+  @if (!isLoadingBook() && !loadError()) {
+    <form class="card border-0 shadow-sm" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="card-body p-4">
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="isbn">ISBN <span aria-hidden="true">*</span></label>
+            <input
+              id="isbn"
+              class="form-control"
+              formControlName="isbn"
+              maxlength="20"
+              autocomplete="off"
+              required
+              [class.is-invalid]="fieldError('isbn') !== null"
+              [attr.aria-invalid]="fieldError('isbn') ? 'true' : null"
+              [attr.aria-describedby]="fieldError('isbn') ? 'isbn-error' : null"
+              (input)="clearServerError('isbn')"
+            />
+            <app-validation-message id="isbn-error" [message]="fieldError('isbn')" />
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="title">Title <span aria-hidden="true">*</span></label>
+            <input
+              id="title"
+              class="form-control"
+              formControlName="title"
+              maxlength="250"
+              required
+              [class.is-invalid]="fieldError('title') !== null"
+              [attr.aria-invalid]="fieldError('title') ? 'true' : null"
+              [attr.aria-describedby]="fieldError('title') ? 'title-error' : null"
+              (input)="clearServerError('title')"
+            />
+            <app-validation-message id="title-error" [message]="fieldError('title')" />
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="author">Author <span aria-hidden="true">*</span></label>
+            <input
+              id="author"
+              class="form-control"
+              formControlName="author"
+              maxlength="200"
+              required
+              [class.is-invalid]="fieldError('author') !== null"
+              [attr.aria-invalid]="fieldError('author') ? 'true' : null"
+              [attr.aria-describedby]="fieldError('author') ? 'author-error' : null"
+              (input)="clearServerError('author')"
+            />
+            <app-validation-message id="author-error" [message]="fieldError('author')" />
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="publisher">Publisher</label>
+            <input
+              id="publisher"
+              class="form-control"
+              formControlName="publisher"
+              maxlength="200"
+              [class.is-invalid]="fieldError('publisher') !== null"
+              [attr.aria-describedby]="fieldError('publisher') ? 'publisher-error' : null"
+              (input)="clearServerError('publisher')"
+            />
+            <app-validation-message id="publisher-error" [message]="fieldError('publisher')" />
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="publishedYear">Publication year</label>
+            <input
+              id="publishedYear"
+              class="form-control"
+              type="text"
+              inputmode="numeric"
+              formControlName="publishedYear"
+              [class.is-invalid]="fieldError('publishedYear') !== null"
+              [attr.aria-describedby]="fieldError('publishedYear') ? 'publishedYear-error' : null"
+              (input)="clearServerError('publishedYear')"
+            />
+            <app-validation-message
+              id="publishedYear-error"
+              [message]="fieldError('publishedYear')"
+            />
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="categoryId"
+              >Category <span aria-hidden="true">*</span></label
+            >
+            <select
+              id="categoryId"
+              class="form-select"
+              formControlName="categoryId"
+              required
+              [class.is-invalid]="fieldError('categoryId') !== null"
+              [attr.aria-invalid]="fieldError('categoryId') ? 'true' : null"
+              [attr.aria-describedby]="fieldError('categoryId') ? 'categoryId-error' : null"
+              (change)="clearServerError('categoryId')"
+            >
+              <option value="">
+                {{ categoriesLoading() ? 'Loading categories…' : 'Select a category' }}
+              </option>
+              @for (category of categories(); track category.id) {
+                <option [value]="category.id.toString()">{{ category.name }}</option>
+              }
+            </select>
+            @if (categoriesError(); as message) {
+              <div class="text-danger small mt-2" role="alert">
+                {{ message }}
+                <button class="btn btn-link btn-sm p-0" type="button" (click)="loadCategories()">
+                  Try again
+                </button>
+              </div>
+            } @else if (!categoriesLoading() && categories().length === 0) {
+              <p class="text-secondary small mt-2">
+                No categories are available. Contact your administrator.
+              </p>
+            }
+            <app-validation-message id="categoryId-error" [message]="fieldError('categoryId')" />
+          </div>
+        </div>
+      </div>
+      <div class="card-footer bg-white d-flex justify-content-end gap-2 p-3">
+        <a class="btn btn-outline-secondary" routerLink="/admin/books">Cancel</a>
+        <button
+          class="btn btn-primary"
+          type="submit"
+          [disabled]="
+            isSubmitting() ||
+            needsReload() ||
+            categoriesLoading() ||
+            categoriesError() !== null ||
+            categories().length === 0
+          "
+        >
+          @if (isSubmitting()) {
+            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            <span>Saving…</span>
+          } @else {
+            <span>{{ isEdit ? 'Save changes' : 'Create book' }}</span>
+          }
+        </button>
+      </div>
+    </form>
+  }
+</main>

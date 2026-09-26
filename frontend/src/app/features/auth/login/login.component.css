@@ -1,0 +1,15 @@
+:host {
+  display: block;
+}
+
+.login-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 1.5rem;
+  background: var(--lms-surface-muted);
+}
+
+.login-card {
+  width: min(100%, 28rem);
+}

@@ -1,0 +1,9 @@
+.empty-state {
+  border-style: dashed !important;
+}
+
+@media (max-width: 575.98px) {
+  .table {
+    min-width: 52rem;
+  }
+}

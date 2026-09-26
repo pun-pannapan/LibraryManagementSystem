@@ -1,26 +1,65 @@
-<main class="shell">
-  <section class="status-panel" aria-labelledby="page-title">
-    <div class="brand-mark" aria-hidden="true">LM</div>
-    <p class="eyebrow">Library Management System</p>
-    <h1 id="page-title">Frontend is ready</h1>
-    <p class="intro">
-      Angular is being served by Nginx and connected to the local API path.
-    </p>
+@if (auth.isAuthenticated()) {
+  <nav class="navbar navbar-expand-lg bg-white border-bottom" aria-label="Main navigation">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" routerLink="/books" (click)="closeMenu()">
+        Library Management System
+      </a>
+      <button
+        class="navbar-toggler"
+        type="button"
+        aria-controls="libraryNavigation"
+        [attr.aria-expanded]="menuOpen()"
+        aria-label="Toggle navigation"
+        (click)="toggleMenu()"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
 
-    <div class="status-row" [class.online]="apiStatus() === 'online'" [class.offline]="apiStatus() === 'offline'">
-      <span class="status-dot" aria-hidden="true"></span>
-      <span>API status: {{ apiStatus() }}</span>
+      <div id="libraryNavigation" class="collapse navbar-collapse" [class.show]="menuOpen()">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link" routerLink="/books" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" ariaCurrentWhenActive="page" (click)="closeMenu()">Books</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" routerLink="/my-borrowings" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeMenu()">My Borrowings</a>
+          </li>
+          @if (isAdministrator()) {
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/admin/books" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeMenu()">Manage Books</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" routerLink="/admin/transactions" routerLinkActive="active" ariaCurrentWhenActive="page" (click)="closeMenu()">Transactions</a>
+            </li>
+          }
+        </ul>
+
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2">
+          <span class="small text-secondary" aria-label="Signed in user">{{ userDisplayName() }}</span>
+          <button class="btn btn-outline-secondary btn-sm" type="button" (click)="logout()">Log out</button>
+        </div>
+      </div>
     </div>
+  </nav>
+}
 
-    <dl class="runtime-details">
-      <div>
-        <dt>API base path</dt>
-        <dd>/api/v1</dd>
-      </div>
-      <div>
-        <dt>Web server</dt>
-        <dd>Nginx</dd>
-      </div>
-    </dl>
-  </section>
-</main>
+@if (notifications.current(); as notification) {
+  <div class="container pt-3" aria-live="polite" aria-atomic="true">
+    <div class="alert alert-{{ notification.type === 'error' ? 'danger' : notification.type }} alert-dismissible" [attr.role]="notification.type === 'error' ? 'alert' : 'status'">
+      {{ notification.message }}
+      <button class="btn-close" type="button" aria-label="Dismiss notification" (click)="notifications.dismiss()"></button>
+    </div>
+  </div>
+}
+
+<router-outlet />
+
+<div
+  class="status-row"
+  [class.online]="apiStatus() === 'online'"
+  [class.offline]="apiStatus() === 'offline'"
+  role="status"
+  aria-live="polite"
+>
+  <span class="status-dot" aria-hidden="true"></span>
+  <span>API: {{ apiStatus() }}</span>
+</div>

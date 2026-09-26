@@ -1,0 +1,66 @@
+<main class="login-page">
+  <section class="card login-card border-0 shadow-sm" aria-labelledby="login-title">
+    <div class="card-body p-4 p-md-5">
+      <p class="text-uppercase fw-semibold small text-primary mb-2">Library Management System</p>
+      <h1 id="login-title" class="h3 mb-2">Sign in</h1>
+      <p class="text-secondary mb-4">Use your library account to continue.</p>
+
+      @if (loginError(); as message) {
+        <div class="alert alert-danger" role="alert">{{ message }}</div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="mb-3">
+          <label class="form-label" for="email">Email</label>
+          <input
+            id="email"
+            class="form-control"
+            type="email"
+            formControlName="email"
+            required
+            autocomplete="username"
+            [class.is-invalid]="form.controls.email.touched && form.controls.email.invalid"
+            [attr.aria-invalid]="
+              form.controls.email.touched && form.controls.email.invalid ? 'true' : null
+            "
+            [attr.aria-describedby]="
+              form.controls.email.touched && form.controls.email.invalid ? 'email-error' : null
+            "
+          />
+          <app-validation-message id="email-error" [message]="fieldError('email')" />
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label" for="password">Password</label>
+          <input
+            id="password"
+            class="form-control"
+            type="password"
+            formControlName="password"
+            required
+            autocomplete="current-password"
+            [class.is-invalid]="form.controls.password.touched && form.controls.password.invalid"
+            [attr.aria-invalid]="
+              form.controls.password.touched && form.controls.password.invalid ? 'true' : null
+            "
+            [attr.aria-describedby]="
+              form.controls.password.touched && form.controls.password.invalid
+                ? 'password-error'
+                : null
+            "
+          />
+          <app-validation-message id="password-error" [message]="fieldError('password')" />
+        </div>
+
+        <button class="btn btn-primary w-100" type="submit" [disabled]="isSubmitting()">
+          @if (isSubmitting()) {
+            <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+            <span>Signing in…</span>
+          } @else {
+            <span>Sign in</span>
+          }
+        </button>
+      </form>
+    </div>
+  </section>
+</main>

@@ -1,0 +1,87 @@
+<main class="container py-4 py-md-5">
+  <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+    <div>
+      <p class="text-uppercase small fw-semibold text-primary mb-2">Your account</p>
+      <h1 class="h2 mb-1">My Borrowings</h1>
+      <p class="text-secondary mb-0">Review your current and past borrowing activity.</p>
+    </div>
+    <div class="filter-control">
+      <label class="form-label" for="historyFilter">Status</label>
+      <select id="historyFilter" class="form-select" [value]="filter()" (change)="setFilter($any($event.target).value)">
+        <option value="all">All</option>
+        <option value="Borrowed">Borrowed</option>
+        <option value="Returned">Returned</option>
+      </select>
+    </div>
+  </div>
+
+  <app-return-confirm-panel
+    [bookTitle]="pendingItem()?.bookTitle ?? null"
+    [busy]="isReturning()"
+    [errorMessage]="returnError()"
+    (confirm)="confirmReturn()"
+    (cancel)="cancelReturn()"
+  />
+  @if (returnError() && !pendingItem()) {
+    <div class="alert alert-danger" role="alert">{{ returnError() }}</div>
+  }
+
+  @if (loading()) {
+    <div class="d-flex align-items-center gap-2 py-5 text-secondary" role="status" aria-live="polite">
+      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+      <span>Loading borrowing history…</span>
+    </div>
+  } @else if (errorMessage(); as message) {
+    <div class="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-3" role="alert">
+      <span>{{ message }}</span>
+      <button class="btn btn-outline-danger btn-sm" type="button" (click)="retry()">Try again</button>
+    </div>
+  } @else if (history().length === 0) {
+    <div class="empty-state text-center rounded-3 border bg-white p-5">
+      <h2 class="h5">No borrowing history</h2>
+      <p class="text-secondary mb-0">Borrowed books will appear here.</p>
+    </div>
+  } @else {
+    <div class="table-responsive rounded-3 border bg-white">
+      <table class="table table-hover align-middle mb-0">
+        <caption class="visually-hidden">Your borrowing history</caption>
+        <thead class="table-light">
+          <tr>
+            <th scope="col">Book</th>
+            <th scope="col">Borrow date</th>
+            <th scope="col">Due date</th>
+            <th scope="col">Return date</th>
+            <th scope="col">Status</th>
+            <th scope="col"><span class="visually-hidden">Action</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of history(); track item.id) {
+            <tr>
+              <td><a [routerLink]="['/books', item.bookId]">{{ item.bookTitle }}</a></td>
+              <td class="text-nowrap">{{ item.borrowedAtUtc | date: 'mediumDate' }}</td>
+              <td class="text-nowrap">{{ item.dueAtUtc | date: 'mediumDate' }}</td>
+              <td class="text-nowrap">{{ item.returnedAtUtc ? (item.returnedAtUtc | date: 'mediumDate') : '—' }}</td>
+              <td>
+                @if (item.status === borrowedStatus) {
+                  <span class="badge text-bg-primary">Borrowed</span>
+                } @else {
+                  <span class="badge text-bg-secondary">Returned</span>
+                }
+              </td>
+              <td>
+                @if (item.status === borrowedStatus) {
+                  <button class="btn btn-outline-primary btn-sm" type="button" [attr.aria-label]="'Return ' + item.bookTitle" [disabled]="isReturning()" (click)="requestReturn(item)">Return</button>
+                } @else {
+                  <span class="text-secondary">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination [page]="page()" [totalPages]="result()?.totalPages ?? 0" label="Borrowing history pages" (pageChange)="goToPage($event)" />
+  }
+</main>

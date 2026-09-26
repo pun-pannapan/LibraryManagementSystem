@@ -1,0 +1,82 @@
+<main class="container py-4 py-md-5">
+  <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+    <div>
+      <p class="text-uppercase small fw-semibold text-primary mb-2">Administrator</p>
+      <h1 class="h2 mb-1">Book Inventory</h1>
+      <p class="text-secondary mb-0">Manage the books available in the library.</p>
+    </div>
+    <a class="btn btn-primary" routerLink="/admin/books/new">Add Book</a>
+  </div>
+
+  <form class="d-flex flex-wrap gap-2 mb-4" (ngSubmit)="search()">
+    <label class="visually-hidden" for="inventorySearch">Search inventory</label>
+    <input id="inventorySearch" class="form-control inventory-search" [formControl]="searchControl" placeholder="Search title, author, or ISBN" />
+    <button class="btn btn-outline-primary" type="submit">Search</button>
+  </form>
+
+  <app-delete-confirm-panel
+    [bookTitle]="pendingBook()?.title ?? null"
+    [busy]="isDeleting()"
+    [errorMessage]="deleteError()"
+    (confirm)="confirmDelete()"
+    (cancel)="cancelDelete()"
+  />
+  @if (loading()) {
+    <div class="d-flex align-items-center gap-2 py-5 text-secondary" role="status" aria-live="polite">
+      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+      <span>Loading inventory…</span>
+    </div>
+  } @else if (errorMessage(); as message) {
+    <div class="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-3" role="alert">
+      <span>{{ message }}</span>
+      <button class="btn btn-outline-danger btn-sm" type="button" (click)="retry()">Try again</button>
+    </div>
+  } @else if (books().length === 0) {
+    <div class="text-center rounded-3 border bg-white p-5">
+      <h2 class="h5">No books found</h2>
+      <p class="text-secondary mb-0">Try another search or add a book to the inventory.</p>
+    </div>
+  } @else {
+    <div class="table-responsive rounded-3 border bg-white">
+      <table class="table table-hover align-middle mb-0">
+        <caption class="visually-hidden">Administrator book inventory</caption>
+        <thead class="table-light">
+          <tr>
+            <th scope="col">Title</th>
+            <th scope="col">Author</th>
+            <th scope="col">ISBN</th>
+            <th scope="col">Category</th>
+            <th scope="col">Availability</th>
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (book of books(); track book.id) {
+            <tr>
+              <td class="fw-semibold">{{ book.title }}</td>
+              <td>{{ book.author }}</td>
+              <td class="text-nowrap">{{ book.isbn }}</td>
+              <td>{{ book.categoryName }}</td>
+              <td>
+                @if (book.availabilityStatus === availableStatus) {
+                  <span class="badge text-bg-success">Available</span>
+                } @else {
+                  <span class="badge text-bg-secondary">Borrowed</span>
+                }
+              </td>
+              <td>
+                <div class="d-flex flex-nowrap gap-2">
+                  <a class="btn btn-outline-secondary btn-sm" [attr.aria-label]="'View ' + book.title" [routerLink]="['/books', book.id]">View</a>
+                  <a class="btn btn-outline-primary btn-sm" [attr.aria-label]="'Edit ' + book.title" [routerLink]="['/admin/books', book.id, 'edit']" queryParamsHandling="preserve">Edit</a>
+                  <button class="btn btn-outline-danger btn-sm" type="button" [attr.aria-label]="'Delete ' + book.title" [disabled]="isDeleting()" (click)="requestDelete(book)">Delete</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination [page]="query().page" [totalPages]="result()?.totalPages ?? 0" [summary]="(result()?.totalCount ?? 0) + ' books · Page ' + query().page + ' of ' + (result()?.totalPages ?? 0)" label="Inventory pages" (pageChange)="goToPage($event)" />
+  }
+</main>

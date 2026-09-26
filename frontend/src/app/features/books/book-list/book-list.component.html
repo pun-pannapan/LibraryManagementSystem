@@ -1,0 +1,189 @@
+<main class="container py-4 py-md-5">
+  <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+    <div>
+      <p class="text-uppercase small fw-semibold text-primary mb-2">Library catalogue</p>
+      <h1 class="h2 mb-1">Books</h1>
+      <p class="text-secondary mb-0">Browse the books currently in the library.</p>
+    </div>
+    @if (result(); as page) {
+      <span class="text-secondary small">{{ page.totalCount }} books found</span>
+    }
+  </div>
+
+  <form class="card border-0 shadow-sm mb-4" [formGroup]="filterForm" (ngSubmit)="applyFilters()">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12 col-md-6 col-xl-3">
+          <label class="form-label" for="search">Title or keyword</label>
+          <input
+            id="search"
+            class="form-control"
+            formControlName="search"
+            placeholder="Search title, author, ISBN"
+          />
+        </div>
+        <div class="col-12 col-md-6 col-xl-2">
+          <label class="form-label" for="author">Author</label>
+          <input id="author" class="form-control" formControlName="author" />
+        </div>
+        <div class="col-12 col-md-6 col-xl-2">
+          <label class="form-label" for="isbn">ISBN</label>
+          <input id="isbn" class="form-control" formControlName="isbn" />
+        </div>
+        <div class="col-12 col-md-6 col-xl-2">
+          <label class="form-label" for="categoryId">Category</label>
+          <select id="categoryId" class="form-select" formControlName="categoryId">
+            <option value="">All categories</option>
+            @for (category of categories(); track category.id) {
+              <option [value]="category.id.toString()">{{ category.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+          <label class="form-label" for="available">Availability</label>
+          <select id="available" class="form-select" formControlName="available">
+            <option value="">All books</option>
+            <option value="true">Available</option>
+            <option value="false">Borrowed</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-4 col-xl-3">
+          <label class="form-label" for="sortBy">Sort by</label>
+          <select id="sortBy" class="form-select" formControlName="sortBy">
+            <option value="title">Title</option>
+            <option value="author">Author</option>
+            <option value="publishedYear">Publication year</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+          <label class="form-label" for="sortDirection">Direction</label>
+          <select id="sortDirection" class="form-select" formControlName="sortDirection">
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+          <label class="form-label" for="pageSize">Rows per page</label>
+          <select id="pageSize" class="form-select" formControlName="pageSize">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+        <div class="col-12 col-xl-5 d-flex align-items-end justify-content-xl-end gap-2">
+          <button class="btn btn-primary" type="submit">Search</button>
+          <button class="btn btn-outline-secondary" type="button" (click)="resetFilters()">
+            Reset
+          </button>
+        </div>
+      </div>
+      @if (categoriesError(); as message) {
+        <div class="text-danger small mt-2" role="alert">
+          {{ message }}
+          <button class="btn btn-link btn-sm p-0" type="button" (click)="loadCategories()">
+            Try again
+          </button>
+        </div>
+      }
+    </div>
+  </form>
+
+  <app-borrow-confirm-panel
+    [bookTitle]="pendingBook()?.title ?? null"
+    [busy]="isBorrowing()"
+    [errorMessage]="borrowError()"
+    (confirm)="confirmBorrow()"
+    (cancel)="cancelBorrow()"
+  />
+  @if (borrowError() && !pendingBook()) {
+    <div class="alert alert-danger" role="alert">{{ borrowError() }}</div>
+  }
+  @if (loading()) {
+    <div
+      class="d-flex align-items-center gap-2 py-5 text-secondary"
+      role="status"
+      aria-live="polite"
+    >
+      <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+      <span>Loading books…</span>
+    </div>
+  } @else if (errorMessage(); as message) {
+    <div
+      class="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-3"
+      role="alert"
+    >
+      <span>{{ message }}</span>
+      <button class="btn btn-outline-danger btn-sm" type="button" (click)="reload()">
+        Try again
+      </button>
+    </div>
+  } @else if (books().length === 0) {
+    <div class="empty-state text-center rounded-3 border bg-white p-5">
+      <h2 class="h5">No books found</h2>
+      <p class="text-secondary mb-0">Try changing or clearing your filters.</p>
+    </div>
+  } @else {
+    <div class="table-responsive rounded-3 border bg-white">
+      <table class="table table-hover align-middle mb-0">
+        <caption class="visually-hidden">
+          Books in the library catalogue
+        </caption>
+        <thead class="table-light">
+          <tr>
+            <th scope="col">Title</th>
+            <th scope="col">Author</th>
+            <th scope="col">ISBN</th>
+            <th scope="col">Category</th>
+            <th scope="col">Year</th>
+            <th scope="col">Availability</th>
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (book of books(); track book.id) {
+            <tr>
+              <td class="fw-semibold">{{ book.title }}</td>
+              <td>{{ book.author }}</td>
+              <td class="text-nowrap">{{ book.isbn }}</td>
+              <td>{{ book.categoryName }}</td>
+              <td>{{ book.publishedYear ?? '—' }}</td>
+              <td>
+                @if (book.availabilityStatus === availableStatus) {
+                  <span class="badge text-bg-success">Available</span>
+                } @else {
+                  <span class="badge text-bg-secondary">Borrowed</span>
+                }
+              </td>
+              <td>
+                <div class="d-flex flex-nowrap gap-2">
+                  <a
+                    class="btn btn-outline-secondary btn-sm"
+                    [routerLink]="['/books', book.id]"
+                    queryParamsHandling="preserve"
+                    >View</a
+                  >
+                  <button
+                    class="btn btn-primary btn-sm"
+                    type="button"
+                    [disabled]="isBorrowing() || book.availabilityStatus !== availableStatus"
+                    [attr.aria-label]="'Borrow ' + book.title"
+                    (click)="requestBorrow(book)"
+                  >
+                    Borrow
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <app-pagination
+      [page]="query().page ?? 1"
+      [totalPages]="result()?.totalPages ?? 0"
+      label="Book list pages"
+      (pageChange)="goToPage($event)"
+    />
+  }
+</main>

@@ -1,0 +1,177 @@
+<main class="container py-4 py-md-5">
+  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+      <p class="text-uppercase text-primary small fw-semibold mb-1">Administration</p>
+      <h1 class="h2 mb-1">Transaction history</h1>
+      <p class="text-secondary mb-0">Review borrowing activity across the library.</p>
+    </div>
+    <a class="btn btn-outline-secondary" routerLink="/admin/books">Manage books</a>
+  </div>
+
+  <form class="card card-body mb-4" [formGroup]="filterForm" (ngSubmit)="applyFilters()" novalidate>
+    @if (filterError(); as message) {
+      <div class="alert alert-danger" role="alert" id="transaction-filter-error">{{ message }}</div>
+    }
+    <div class="row g-3">
+      <div class="col-md-6 col-lg-4">
+        <label class="form-label" for="userId">User ID</label>
+        <input
+          class="form-control"
+          id="userId"
+          formControlName="userId"
+          type="text"
+          placeholder="User ID"
+          [class.is-invalid]="
+            filterForm.controls.userId.touched && filterForm.controls.userId.invalid
+          "
+          [attr.aria-invalid]="
+            filterForm.controls.userId.touched && filterForm.controls.userId.invalid ? 'true' : null
+          "
+          [attr.aria-describedby]="
+            filterError() ? 'userId-help transaction-filter-error' : 'userId-help'
+          "
+        />
+        <div id="userId-help" class="form-text">Filter by the account’s user ID.</div>
+      </div>
+      <div class="col-md-6 col-lg-2">
+        <label class="form-label" for="bookId">Book ID</label>
+        <input
+          class="form-control"
+          id="bookId"
+          formControlName="bookId"
+          type="text"
+          inputmode="numeric"
+          [class.is-invalid]="
+            filterForm.controls.bookId.touched && filterForm.controls.bookId.invalid
+          "
+          [attr.aria-invalid]="
+            filterForm.controls.bookId.touched && filterForm.controls.bookId.invalid ? 'true' : null
+          "
+          [attr.aria-describedby]="filterError() ? 'transaction-filter-error' : null"
+        />
+      </div>
+      <div class="col-md-6 col-lg-2">
+        <label class="form-label" for="status">Status</label>
+        <select class="form-select" id="status" formControlName="status">
+          <option value="">All statuses</option>
+          <option value="Borrowed">Borrowed</option>
+          <option value="Returned">Returned</option>
+        </select>
+      </div>
+      <div class="col-md-6 col-lg-2">
+        <label class="form-label" for="borrowedFrom">Borrowed from</label>
+        <input class="form-control" id="borrowedFrom" formControlName="borrowedFrom" type="date" />
+      </div>
+      <div class="col-md-6 col-lg-2">
+        <label class="form-label" for="borrowedTo">Borrowed to</label>
+        <input class="form-control" id="borrowedTo" formControlName="borrowedTo" type="date" />
+      </div>
+      <div class="col-md-6 col-lg-2">
+        <label class="form-label" for="returnedFrom">Returned from</label>
+        <input class="form-control" id="returnedFrom" formControlName="returnedFrom" type="date" />
+      </div>
+      <div class="col-md-6 col-lg-2">
+        <label class="form-label" for="returnedTo">Returned to</label>
+        <input class="form-control" id="returnedTo" formControlName="returnedTo" type="date" />
+      </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2 mt-3">
+      <button class="btn btn-primary" type="submit">Apply filters</button>
+      <button class="btn btn-outline-secondary" type="button" (click)="clearFilters()">
+        Clear
+      </button>
+    </div>
+  </form>
+
+  @if (errorMessage(); as error) {
+    <div
+      class="alert alert-danger d-flex flex-wrap align-items-center justify-content-between gap-2"
+      role="alert"
+    >
+      <span>{{ error }}</span
+      ><button class="btn btn-sm btn-outline-danger" type="button" (click)="retry()">
+        Try again
+      </button>
+    </div>
+  }
+  @if (loading()) {
+    <div class="text-center py-5" role="status">
+      <span class="spinner-border text-primary" aria-hidden="true"></span
+      ><span class="visually-hidden">Loading transactions…</span>
+    </div>
+  } @else if (!errorMessage() && transactions().length === 0) {
+    <div class="alert alert-info">No transactions match these filters.</div>
+  } @else if (!errorMessage()) {
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <p class="text-secondary small mb-0">{{ result()?.totalCount }} transaction(s)</p>
+      <label class="d-flex align-items-center gap-2 small"
+        >Rows
+        <select
+          #rowsPerPage
+          class="form-select form-select-sm"
+          [value]="pageSize()"
+          (change)="changePageSize(rowsPerPage.value)"
+        >
+          <option value="10">10</option>
+          <option value="20">20</option>
+          <option value="50">50</option>
+        </select>
+      </label>
+    </div>
+    <p class="small text-secondary">Dates and times are shown in UTC.</p>
+    <div class="table-responsive card">
+      <table class="table table-hover align-middle mb-0">
+        <caption class="visually-hidden">
+          Library transaction history
+        </caption>
+        <thead class="table-light">
+          <tr>
+            <th scope="col">User</th>
+            <th scope="col">Book</th>
+            <th scope="col">Borrow date</th>
+            <th scope="col">Due date</th>
+            <th scope="col">Return date</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (transaction of transactions(); track transaction.id) {
+            <tr>
+              <td>
+                <span class="d-block">{{ transaction.userEmail }}</span
+                ><small class="text-secondary">{{ transaction.userId }}</small>
+              </td>
+              <td>
+                {{ transaction.bookTitle }}
+                <small class="text-secondary">(#{{ transaction.bookId }})</small>
+              </td>
+              <td>{{ transaction.borrowedAtUtc | date: 'medium' : 'UTC' }}</td>
+              <td>{{ transaction.dueAtUtc | date: 'mediumDate' : 'UTC' }}</td>
+              <td>
+                {{
+                  transaction.returnedAtUtc
+                    ? (transaction.returnedAtUtc | date: 'medium' : 'UTC')
+                    : '—'
+                }}
+              </td>
+              <td>
+                <span
+                  class="badge"
+                  [class.text-bg-primary]="transaction.status === borrowedStatus"
+                  [class.text-bg-success]="transaction.status === returnedStatus"
+                  >{{ transaction.status === borrowedStatus ? 'Borrowed' : 'Returned' }}</span
+                >
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <app-pagination
+      [page]="page()"
+      [totalPages]="result()?.totalPages ?? 0"
+      label="Transaction history pages"
+      (pageChange)="goToPage($event)"
+    />
+  }
+</main>
