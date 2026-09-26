@@ -13,42 +13,25 @@
       <div class="alert alert-danger" role="alert" id="transaction-filter-error">{{ message }}</div>
     }
     <div class="row g-3">
-      <div class="col-md-6 col-lg-4">
-        <label class="form-label" for="userId">User ID</label>
+      <div class="col-12 col-lg-4">
+        <label class="form-label" for="search">Search</label>
         <input
           class="form-control"
-          id="userId"
-          formControlName="userId"
+          id="search"
+          formControlName="search"
           type="text"
-          placeholder="User ID"
+          placeholder="Search user email, name, book title, or ISBN"
           [class.is-invalid]="
-            filterForm.controls.userId.touched && filterForm.controls.userId.invalid
+            filterForm.controls.search.touched && filterForm.controls.search.invalid
           "
           [attr.aria-invalid]="
-            filterForm.controls.userId.touched && filterForm.controls.userId.invalid ? 'true' : null
+            filterForm.controls.search.touched && filterForm.controls.search.invalid ? 'true' : null
           "
           [attr.aria-describedby]="
-            filterError() ? 'userId-help transaction-filter-error' : 'userId-help'
+            filterError() ? 'search-help transaction-filter-error' : 'search-help'
           "
         />
-        <div id="userId-help" class="form-text">Filter by the account’s user ID.</div>
-      </div>
-      <div class="col-md-6 col-lg-2">
-        <label class="form-label" for="bookId">Book ID</label>
-        <input
-          class="form-control"
-          id="bookId"
-          formControlName="bookId"
-          type="text"
-          inputmode="numeric"
-          [class.is-invalid]="
-            filterForm.controls.bookId.touched && filterForm.controls.bookId.invalid
-          "
-          [attr.aria-invalid]="
-            filterForm.controls.bookId.touched && filterForm.controls.bookId.invalid ? 'true' : null
-          "
-          [attr.aria-describedby]="filterError() ? 'transaction-filter-error' : null"
-        />
+        <div id="search-help" class="form-text">Search by user details, book title, or ISBN.</div>
       </div>
       <div class="col-md-6 col-lg-2">
         <label class="form-label" for="status">Status</label>
@@ -137,14 +120,8 @@
         <tbody>
           @for (transaction of transactions(); track transaction.id) {
             <tr>
-              <td>
-                <span class="d-block">{{ transaction.userEmail }}</span
-                ><small class="text-secondary">{{ transaction.userId }}</small>
-              </td>
-              <td>
-                {{ transaction.bookTitle }}
-                <small class="text-secondary">(#{{ transaction.bookId }})</small>
-              </td>
+              <td>{{ transaction.userEmail }}</td>
+              <td>{{ transaction.bookTitle }}</td>
               <td>{{ transaction.borrowedAtUtc | date: 'medium' : 'UTC' }}</td>
               <td>{{ transaction.dueAtUtc | date: 'mediumDate' : 'UTC' }}</td>
               <td>

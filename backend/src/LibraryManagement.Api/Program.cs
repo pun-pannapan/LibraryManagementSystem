@@ -192,11 +192,12 @@ app.MapGet("/api/v{version:apiVersion}/categories", async (ApplicationDbContext 
 
     return Results.Ok(categories);
 })
-.AllowAnonymous()
+.RequireAuthorization()
 .WithApiVersionSet(versionSet)
 .MapToApiVersion(new ApiVersion(1, 0))
 .WithTags("Categories")
-.Produces<IReadOnlyCollection<CategoryDto>>();
+.Produces<IReadOnlyCollection<CategoryDto>>()
+.Produces(StatusCodes.Status401Unauthorized);
 
 var healthOptions = new HealthCheckOptions
 {

@@ -13,7 +13,7 @@ public sealed class LibraryDbContextFactory : IDesignTimeDbContextFactory<Applic
         var connectionString = DatabaseConnection.Create(configuration);
 
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseSqlServer(connectionString)
+            .UseSqlServer(connectionString, sqlOptions => sqlOptions.MigrationsAssembly("LibraryManagement.Api"))
             .Options;
 
         return new ApplicationDbContext(options);

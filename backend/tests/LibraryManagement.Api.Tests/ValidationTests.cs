@@ -29,7 +29,7 @@ public sealed class ValidationTests
             "Robert C. Martin",
             "Prentice Hall",
             2008,
-            0));
+            Guid.Empty));
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(error => error.PropertyName == nameof(CreateBookRequest.Title));
@@ -64,7 +64,7 @@ public sealed class ValidationTests
     {
         var validator = new BorrowBookRequestValidator();
 
-        var result = validator.Validate(new BorrowBookRequest(0));
+        var result = validator.Validate(new BorrowBookRequest(Guid.Empty));
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(error => error.PropertyName == nameof(BorrowBookRequest.BookId));
@@ -75,7 +75,7 @@ public sealed class ValidationTests
     {
         var validator = new BorrowingHistoryQueryValidator();
 
-        var result = validator.Validate(new BorrowingHistoryQuery("Lost", "user.password", 0, 101));
+        var result = validator.Validate(new BorrowingHistoryQuery("Lost", "user.password", null, 0, 101));
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(error => error.PropertyName == nameof(BorrowingHistoryQuery.Status));

@@ -139,7 +139,7 @@ GET /health
 GET /api/v1/health
 ```
 
-Book create, update, delete, and full borrowing history require an administrator token.
+Book browsing, category listing, book create/update/delete, and borrowing endpoints require a valid JWT. Creating, updating, deleting books, and viewing full borrowing history additionally require an administrator token.
 
 ## Frontend manual test guide
 
@@ -177,7 +177,8 @@ Use the account configured by `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `.
 - Create a book, edit it, and delete it.
 - Confirm that required-field, whitespace-only, invalid-year, and missing-category validation prevents invalid submissions.
 - Open `/admin/transactions`.
-- Test status, date, pagination, and other available filters.
+- Search by a user email/name, book title, or ISBN, then test status, date, and pagination filters.
+- Confirm the table shows the user email and book title without internal UUID values.
 
 ### 5. Check frontend-to-backend requests
 
@@ -241,7 +242,7 @@ Request body:
   "author": "Eric Evans",
   "publisher": "Addison-Wesley",
   "publishedYear": 2003,
-  "categoryId": 1
+  "categoryId": "10000000-0000-0000-0000-000000000001"
 }
 ```
 
@@ -276,7 +277,7 @@ Request body:
   "author": "Eric Evans",
   "publisher": "Addison-Wesley",
   "publishedYear": 2003,
-  "categoryId": 1,
+  "categoryId": "10000000-0000-0000-0000-000000000001",
   "rowVersion": "PASTE_LATEST_ROW_VERSION_HERE"
 }
 ```
@@ -326,7 +327,7 @@ Request body:
 
 ```json
 {
-  "bookId": 1
+  "bookId": "20000000-0000-0000-0000-000000000001"
 }
 ```
 
@@ -389,6 +390,8 @@ Expected result:
 
 In Development, the API applies migrations and seeds the local database during startup.
 
+`Categories.Id`, `Books.Id`, and `BorrowTransactions.Id` (plus the related book/category foreign keys) use SQL Server `uniqueidentifier` values. The `UseGuidLibraryEntityIds` migration preserves existing relationships while assigning GUIDs to existing rows. Because converting those generated values back to identity integers is not lossless, the migration's down direction is intentionally unsupported; use a database backup or `docker compose down -v` when a clean reset is required.
+
 ### ER Diagram
 
 ```mermaid
@@ -398,28 +401,28 @@ erDiagram
     ASP_NET_USERS ||--o{ BORROW_TRANSACTIONS : creates
 
     CATEGORIES {
-        int Id PK
+        guid Id PK
         string Name
         string Description
     }
 
     BOOKS {
-        int Id PK
+        guid Id PK
         string Isbn UK
         string Title
         string Author
         string Publisher
         int PublishedYear
         int AvailabilityStatus
-        int CategoryId FK
+        guid CategoryId FK
         datetime CreatedAtUtc
         datetime UpdatedAtUtc
         rowversion RowVersion
     }
 
     BORROW_TRANSACTIONS {
-        int Id PK
-        int BookId FK
+        guid Id PK
+        guid BookId FK
         guid UserId FK
         datetime BorrowedAtUtc
         datetime DueAtUtc

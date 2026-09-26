@@ -51,7 +51,7 @@ export class MyBorrowingsComponent implements OnInit {
   protected readonly pageSize = signal(20);
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
-  protected readonly pendingReturnId = signal<number | null>(null);
+  protected readonly pendingReturnId = signal<string | null>(null);
   protected readonly isReturning = signal(false);
   protected readonly returnError = signal<string | null>(null);
   protected readonly borrowedStatus = BorrowTransactionStatus.Borrowed;

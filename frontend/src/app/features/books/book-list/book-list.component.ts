@@ -52,7 +52,7 @@ export class BookListComponent implements OnInit {
   protected readonly categoriesError = signal<string | null>(null);
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
-  protected readonly pendingBorrowId = signal<number | null>(null);
+  protected readonly pendingBorrowId = signal<string | null>(null);
   protected readonly isBorrowing = signal(false);
   protected readonly borrowError = signal<string | null>(null);
   protected readonly availableStatus = BookAvailabilityStatus.Available;
@@ -123,13 +123,13 @@ export class BookListComponent implements OnInit {
 
   protected applyFilters(): void {
     const values = this.filterForm.getRawValue();
-    const categoryId = Number(values.categoryId);
+    const categoryId = values.categoryId.trim() || undefined;
     const available = values.available === '' ? undefined : values.available === 'true';
     const query: BookSearchRequest = {
       search: values.search.trim() || undefined,
       author: values.author.trim() || undefined,
       isbn: values.isbn.trim() || undefined,
-      categoryId: Number.isInteger(categoryId) && categoryId > 0 ? categoryId : undefined,
+      categoryId,
       available,
       sortBy: values.sortBy as BookSearchRequest['sortBy'],
       sortDirection: values.sortDirection as BookSearchRequest['sortDirection'],
@@ -229,7 +229,7 @@ export class BookListComponent implements OnInit {
   }
 
   private readQuery(params: ParamMap): BookSearchRequest {
-    const categoryValue = Number(params.get('categoryId'));
+    const categoryValue = params.get('categoryId');
     const pageValue = Number(params.get('page'));
     const pageSizeValue = Number(params.get('pageSize'));
     const sortBy = params.get('sortBy');
@@ -240,7 +240,7 @@ export class BookListComponent implements OnInit {
       search: params.get('search') || undefined,
       author: params.get('author') || undefined,
       isbn: params.get('isbn') || undefined,
-      categoryId: Number.isInteger(categoryValue) && categoryValue > 0 ? categoryValue : undefined,
+      categoryId: categoryValue && this.isGuid(categoryValue) ? categoryValue : undefined,
       available: availableValue === 'true' ? true : availableValue === 'false' ? false : undefined,
       sortBy: sortBy === 'author' || sortBy === 'publishedYear' ? sortBy : 'title',
       sortDirection: sortDirection === 'desc' ? 'desc' : 'asc',
@@ -263,5 +263,9 @@ export class BookListComponent implements OnInit {
       },
       { emitEvent: false },
     );
+  }
+
+  private isGuid(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
   }
 }

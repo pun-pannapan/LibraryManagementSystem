@@ -25,8 +25,7 @@ import { PagedResult } from '../../../shared/models/api.models';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 
 interface TransactionFilters {
-  userId: string;
-  bookId: string;
+  search: string;
   status: string;
   borrowedFrom: string;
   borrowedTo: string;
@@ -59,11 +58,7 @@ export class AdminTransactionsComponent implements OnInit {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly filterError = signal<string | null>(null);
   protected readonly filterForm = this.formBuilder.nonNullable.group({
-    userId: [
-      '',
-      Validators.pattern(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i),
-    ],
-    bookId: ['', Validators.pattern(/^[1-9]\d*$/)],
+    search: ['', Validators.maxLength(250)],
     status: [''],
     borrowedFrom: [''],
     borrowedTo: [''],
@@ -111,17 +106,13 @@ export class AdminTransactionsComponent implements OnInit {
 
   protected applyFilters(): void {
     const values = this.filterForm.getRawValue();
-    const filters = { ...values, userId: values.userId.trim(), bookId: values.bookId.trim() };
+    const filters = { ...values, search: values.search.trim() };
     this.filterForm.patchValue(filters);
     this.filterError.set(null);
 
     if (this.filterForm.invalid) {
       this.filterForm.markAllAsTouched();
-      this.filterError.set(
-        this.filterForm.controls.userId.invalid
-          ? 'Enter a valid user ID, such as 00000000-0000-0000-0000-000000000001.'
-          : 'Book ID must be a positive whole number.',
-      );
+      this.filterError.set('Search text must be 250 characters or fewer.');
       return;
     }
 
@@ -165,8 +156,7 @@ export class AdminTransactionsComponent implements OnInit {
     request: AdminBorrowingHistoryRequest;
   } {
     const filters: TransactionFilters = {
-      userId: params.get('userId') ?? '',
-      bookId: params.get('bookId') ?? '',
+      search: params.get('search') ?? '',
       status: params.get('status') ?? '',
       borrowedFrom: this.readDate(params.get('borrowedFrom')),
       borrowedTo: this.readDate(params.get('borrowedTo')),
@@ -175,10 +165,8 @@ export class AdminTransactionsComponent implements OnInit {
     };
     const pageValue = Number(params.get('page'));
     const pageSizeValue = Number(params.get('pageSize'));
-    const bookId = Number(filters.bookId);
     const request: AdminBorrowingHistoryRequest = {
-      userId: filters.userId || undefined,
-      bookId: Number.isInteger(bookId) && bookId > 0 ? bookId : undefined,
+      search: filters.search || undefined,
       status:
         filters.status === 'Borrowed' || filters.status === 'Returned' ? filters.status : undefined,
       borrowedFrom: filters.borrowedFrom ? `${filters.borrowedFrom}T00:00:00Z` : undefined,
@@ -196,8 +184,7 @@ export class AdminTransactionsComponent implements OnInit {
     return this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
-        userId: filters.userId || null,
-        bookId: filters.bookId || null,
+        search: filters.search || null,
         status: filters.status || null,
         borrowedFrom: filters.borrowedFrom || null,
         borrowedTo: filters.borrowedTo || null,
@@ -219,8 +206,7 @@ export class AdminTransactionsComponent implements OnInit {
 
   private emptyFilters(): TransactionFilters {
     return {
-      userId: '',
-      bookId: '',
+      search: '',
       status: '',
       borrowedFrom: '',
       borrowedTo: '',

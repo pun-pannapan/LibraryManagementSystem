@@ -35,19 +35,21 @@ describe('BookListComponent', () => {
     fixture.detectChanges();
     http
       .expectOne('/api/v1/categories')
-      .flush([{ id: 1, name: 'Science Fiction', description: null }]);
+      .flush([
+        { id: '10000000-0000-0000-0000-000000000001', name: 'Science Fiction', description: null },
+      ]);
     http
       .expectOne((request) => request.url === '/api/v1/books')
       .flush({
         items: [
           {
-            id: 7,
+            id: '20000000-0000-0000-0000-000000000001',
             isbn: '9780000000001',
             title: 'Dune',
             author: 'Frank Herbert',
             publisher: null,
             publishedYear: 1965,
-            categoryId: 1,
+            categoryId: '10000000-0000-0000-0000-000000000001',
             categoryName: 'Science Fiction',
             availabilityStatus: 1,
             rowVersion: 'AQID',
@@ -80,7 +82,7 @@ describe('BookListComponent', () => {
     available.value = 'true';
     available.dispatchEvent(new Event('change', { bubbles: true }));
     const category = fixture.nativeElement.querySelector('#categoryId') as HTMLSelectElement;
-    category.value = '1';
+    category.value = '10000000-0000-0000-0000-000000000001';
     category.dispatchEvent(new Event('change', { bubbles: true }));
     fixture.detectChanges();
     (fixture.nativeElement.querySelector('form') as HTMLFormElement).dispatchEvent(
@@ -93,7 +95,7 @@ describe('BookListComponent', () => {
         queryParams: expect.objectContaining({
           search: 'dune',
           author: 'Herbert',
-          categoryId: 1,
+          categoryId: '10000000-0000-0000-0000-000000000001',
           available: true,
           page: 1,
         }),
@@ -139,7 +141,7 @@ describe('BookListComponent', () => {
 
     const request = http.expectOne('/api/v1/borrowings');
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({ bookId: 7 });
+    expect(request.request.body).toEqual({ bookId: '20000000-0000-0000-0000-000000000001' });
     request.flush(
       { message: 'Book is no longer available.' },
       { status: 409, statusText: 'Conflict' },

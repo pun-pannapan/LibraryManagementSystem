@@ -62,23 +62,25 @@ describe('AdminTransactionsComponent', () => {
     );
   });
 
-  it('applies a typed book ID without changing the form value type', () => {
+  it('applies a text search across users and books', () => {
     const { fixture } = createAndLoad();
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    const input = fixture.nativeElement.querySelector('#bookId') as HTMLInputElement;
-    input.value = '7';
+    const input = fixture.nativeElement.querySelector('#search') as HTMLInputElement;
+    input.value = 'clean code';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     (fixture.nativeElement.querySelector('form') as HTMLFormElement).dispatchEvent(
       new Event('submit', { bubbles: true, cancelable: true }),
     );
     expect(navigate).toHaveBeenCalledWith(
       [],
-      expect.objectContaining({ queryParams: expect.objectContaining({ bookId: '7', page: 1 }) }),
+      expect.objectContaining({
+        queryParams: expect.objectContaining({ search: 'clean code', page: 1 }),
+      }),
     );
   });
 
   it('clears loaded filters in both the form and the URL', () => {
-    params.next(convertToParamMap({ status: 'Returned', bookId: '7' }));
+    params.next(convertToParamMap({ status: 'Returned', search: 'clean' }));
     const { fixture } = createAndLoad();
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     const buttons = fixture.nativeElement.querySelectorAll(
@@ -89,11 +91,11 @@ describe('AdminTransactionsComponent', () => {
     clear?.click();
     fixture.detectChanges();
     expect((fixture.nativeElement.querySelector('#status') as HTMLSelectElement).value).toBe('');
-    expect((fixture.nativeElement.querySelector('#bookId') as HTMLInputElement).value).toBe('');
+    expect((fixture.nativeElement.querySelector('#search') as HTMLInputElement).value).toBe('');
     expect(navigate).toHaveBeenCalledWith(
       [],
       expect.objectContaining({
-        queryParams: expect.objectContaining({ status: null, bookId: null, page: 1 }),
+        queryParams: expect.objectContaining({ status: null, search: null, page: 1 }),
       }),
     );
   });

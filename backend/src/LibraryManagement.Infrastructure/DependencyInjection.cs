@@ -16,7 +16,11 @@ public static class DependencyInjection
         var connectionString = DatabaseConnection.Create(configuration);
 
         services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(connectionString, sqlOptions => sqlOptions.EnableRetryOnFailure()));
+            options.UseSqlServer(connectionString, sqlOptions =>
+            {
+                sqlOptions.MigrationsAssembly("LibraryManagement.Api");
+                sqlOptions.EnableRetryOnFailure();
+            }));
 
         services
             .AddIdentityCore<ApplicationUser>(options =>

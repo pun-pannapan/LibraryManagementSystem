@@ -4,19 +4,19 @@ export enum BookAvailabilityStatus {
 }
 
 export interface CategoryDto {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
 }
 
 export interface BookDto {
-  id: number;
+  id: string;
   isbn: string;
   title: string;
   author: string;
   publisher: string | null;
   publishedYear: number | null;
-  categoryId: number;
+  categoryId: string;
   categoryName: string;
   availabilityStatus: BookAvailabilityStatus;
   /** Base64 encoded SQL Server row-version value, required for updates. */
@@ -32,7 +32,7 @@ export interface CreateBookRequest {
   author: string;
   publisher: string | null;
   publishedYear: number | null;
-  categoryId: number;
+  categoryId: string;
 }
 
 export interface UpdateBookRequest extends CreateBookRequest {
@@ -44,7 +44,7 @@ export interface BookSearchRequest {
   title?: string;
   author?: string;
   isbn?: string;
-  categoryId?: number;
+  categoryId?: string;
   available?: boolean;
   sortBy?: 'title' | 'author' | 'publishedYear';
   sortDirection?: 'asc' | 'desc';

@@ -4,9 +4,9 @@ namespace LibraryManagement.Domain.Entities;
 
 public sealed class BorrowTransaction
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
-    public int BookId { get; set; }
+    public Guid BookId { get; set; }
 
     public Book Book { get; set; } = null!;
 

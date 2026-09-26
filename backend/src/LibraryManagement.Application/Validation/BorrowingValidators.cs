@@ -8,7 +8,7 @@ public sealed class BorrowBookRequestValidator : AbstractValidator<BorrowBookReq
 {
     public BorrowBookRequestValidator()
     {
-        RuleFor(request => request.BookId).GreaterThan(0);
+        RuleFor(request => request.BookId).NotEmpty();
     }
 }
 
@@ -16,7 +16,7 @@ public sealed class ReturnBorrowingRequestValidator : AbstractValidator<ReturnBo
 {
     public ReturnBorrowingRequestValidator()
     {
-        RuleFor(request => request.BorrowingId).GreaterThan(0);
+        RuleFor(request => request.BorrowingId).NotEmpty();
     }
 }
 
@@ -33,6 +33,8 @@ public sealed class BorrowingHistoryQueryValidator : AbstractValidator<Borrowing
             .Must(value => string.IsNullOrWhiteSpace(value)
                 || Enum.TryParse<BorrowTransactionStatus>(value, ignoreCase: true, out _))
             .WithMessage("Status must be Borrowed or Returned.");
+
+        RuleFor(query => query.Search).MaximumLength(250);
 
         RuleFor(query => query.Sort)
             .Must(value => string.IsNullOrWhiteSpace(value)

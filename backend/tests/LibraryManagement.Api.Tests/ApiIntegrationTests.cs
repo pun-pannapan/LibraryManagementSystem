@@ -32,6 +32,7 @@ public sealed class ApiIntegrationTests
         using var factory = new TestApplicationFactory();
         await factory.SeedAsync();
         using var client = factory.CreateClient();
+        await AuthorizeAsync(client, "user@example.com");
 
         var response = await client.GetAsync("/api/v1/books?search=Clean&page=1&pageSize=10");
 
@@ -40,6 +41,22 @@ public sealed class ApiIntegrationTests
         body.Should().NotBeNull();
         body!.Items.Should().ContainSingle(book => book.Title == "Clean Code");
         body.TotalCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task AnonymousClientCannotReadBooksOrCategories()
+    {
+        using var factory = new TestApplicationFactory();
+        await factory.SeedAsync();
+        using var client = factory.CreateClient();
+
+        var booksResponse = await client.GetAsync("/api/v1/books");
+        var bookResponse = await client.GetAsync($"/api/v1/books/{TestApplicationFactory.CleanCodeBookId}");
+        var categoriesResponse = await client.GetAsync("/api/v1/categories");
+
+        booksResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        bookResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        categoriesResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -58,7 +75,7 @@ public sealed class ApiIntegrationTests
                 "Eric Evans",
                 "Addison-Wesley",
                 2003,
-                1));
+                TestApplicationFactory.TechnologyCategoryId));
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await response.Content.ReadFromJsonAsync<BookDto>();
@@ -74,7 +91,7 @@ public sealed class ApiIntegrationTests
         using var client = factory.CreateClient();
         await AuthorizeAsync(client, "user@example.com");
 
-        var borrowResponse = await client.PostAsJsonAsync("/api/v1/borrowings", new BorrowBookRequest(1));
+        var borrowResponse = await client.PostAsJsonAsync("/api/v1/borrowings", new BorrowBookRequest(TestApplicationFactory.CleanCodeBookId));
 
         borrowResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var borrowing = await borrowResponse.Content.ReadFromJsonAsync<BorrowTransactionDto>();
@@ -86,6 +103,28 @@ public sealed class ApiIntegrationTests
         var returned = await returnResponse.Content.ReadFromJsonAsync<BorrowTransactionDto>();
         returned.Should().NotBeNull();
         returned!.ReturnedAtUtc.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task AdminHistorySearchesByBookTitle()
+    {
+        using var factory = new TestApplicationFactory();
+        await factory.SeedAsync();
+        using var client = factory.CreateClient();
+        await AuthorizeAsync(client, "user@example.com");
+
+        var borrowResponse = await client.PostAsJsonAsync(
+            "/api/v1/borrowings",
+            new BorrowBookRequest(TestApplicationFactory.CleanCodeBookId));
+        borrowResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        await AuthorizeAsync(client, "admin@example.com");
+        var searchResponse = await client.GetAsync("/api/v1/borrowings?search=Clean%20Code&page=1&pageSize=20");
+
+        searchResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await searchResponse.Content.ReadFromJsonAsync<PagedResult<BorrowTransactionDto>>();
+        body.Should().NotBeNull();
+        body!.Items.Should().ContainSingle(item => item.BookTitle == "Clean Code");
     }
 
     private static async Task AuthorizeAsync(HttpClient client, string email)

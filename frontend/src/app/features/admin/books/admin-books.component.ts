@@ -50,7 +50,7 @@ export class AdminBooksComponent implements OnInit {
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly availableStatus = BookAvailabilityStatus.Available;
-  protected readonly pendingDeleteId = signal<number | null>(null);
+  protected readonly pendingDeleteId = signal<string | null>(null);
   protected readonly isDeleting = signal(false);
   protected readonly deleteError = signal<string | null>(null);
 

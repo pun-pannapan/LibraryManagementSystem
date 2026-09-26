@@ -4,12 +4,12 @@ export enum BorrowTransactionStatus {
 }
 
 export interface BorrowBookRequest {
-  bookId: number;
+  bookId: string;
 }
 
 export interface BorrowTransactionDto {
-  id: number;
-  bookId: number;
+  id: string;
+  bookId: string;
   bookTitle: string;
   userId: string;
   userEmail: string;
@@ -24,13 +24,14 @@ export type BorrowingHistoryItem = BorrowTransactionDto;
 export interface BorrowingHistoryRequest {
   status?: 'Borrowed' | 'Returned';
   sort?: string;
+  search?: string;
   page?: number;
   pageSize?: number;
 }
 
 export interface AdminBorrowingHistoryRequest extends BorrowingHistoryRequest {
   userId?: string;
-  bookId?: number;
+  bookId?: string;
   borrowedFrom?: string;
   borrowedTo?: string;
   returnedFrom?: string;

@@ -32,7 +32,7 @@ describe('BookFormComponent', () => {
     fixture.detectChanges();
     TestBed.inject(HttpTestingController)
       .expectOne('/api/v1/categories')
-      .flush([{ id: 1, name: 'Fiction', description: null }]);
+      .flush([{ id: '10000000-0000-0000-0000-000000000001', name: 'Fiction', description: null }]);
     fixture.detectChanges();
     (fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement).click();
     fixture.detectChanges();
@@ -46,7 +46,9 @@ describe('BookFormComponent', () => {
     const fixture = TestBed.createComponent(BookFormComponent);
     fixture.detectChanges();
     const http = TestBed.inject(HttpTestingController);
-    http.expectOne('/api/v1/categories').flush([{ id: 1, name: 'Fiction', description: null }]);
+    http
+      .expectOne('/api/v1/categories')
+      .flush([{ id: '10000000-0000-0000-0000-000000000001', name: 'Fiction', description: null }]);
     fixture.detectChanges();
 
     for (const field of ['isbn', 'title', 'author']) {
@@ -55,7 +57,7 @@ describe('BookFormComponent', () => {
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
     const category = fixture.nativeElement.querySelector('#categoryId') as HTMLSelectElement;
-    category.value = '1';
+    category.value = '10000000-0000-0000-0000-000000000001';
     category.dispatchEvent(new Event('change', { bubbles: true }));
     (fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement).click();
     fixture.detectChanges();

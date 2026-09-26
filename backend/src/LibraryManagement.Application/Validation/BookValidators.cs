@@ -50,7 +50,7 @@ public sealed class GetBooksQueryValidator : AbstractValidator<GetBooksQuery>
         RuleFor(query => query.Title).MaximumLength(250);
         RuleFor(query => query.Author).MaximumLength(200);
         RuleFor(query => query.Isbn).MaximumLength(20);
-        RuleFor(query => query.CategoryId).GreaterThan(0).When(query => query.CategoryId.HasValue);
+        RuleFor(query => query.CategoryId).NotEmpty().When(query => query.CategoryId.HasValue);
         RuleFor(query => query.Page).GreaterThan(0);
         RuleFor(query => query.PageSize).InclusiveBetween(1, 100);
 
@@ -75,7 +75,7 @@ internal sealed class BookRequestRules<T> : AbstractValidator<T>
         Expression<Func<T, string>> author,
         Expression<Func<T, string?>> publisher,
         Expression<Func<T, int?>> publishedYear,
-        Expression<Func<T, int>> categoryId)
+        Expression<Func<T, Guid>> categoryId)
     {
         var publishedYearAccessor = publishedYear.Compile();
 
@@ -104,7 +104,7 @@ internal sealed class BookRequestRules<T> : AbstractValidator<T>
             .WithName(nameof(CreateBookRequest.PublishedYear));
 
         RuleFor(categoryId)
-            .GreaterThan(0)
+            .NotEmpty()
             .WithName(nameof(CreateBookRequest.CategoryId));
     }
 }

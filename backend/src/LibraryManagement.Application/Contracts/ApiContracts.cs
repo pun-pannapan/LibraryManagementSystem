@@ -22,16 +22,16 @@ public sealed record UserDto(
     string? LastName,
     IReadOnlyCollection<string> Roles);
 
-public sealed record CategoryDto(int Id, string Name, string? Description);
+public sealed record CategoryDto(Guid Id, string Name, string? Description);
 
 public sealed record BookDto(
-    int Id,
+    Guid Id,
     string Isbn,
     string Title,
     string Author,
     string? Publisher,
     int? PublishedYear,
-    int CategoryId,
+    Guid CategoryId,
     string CategoryName,
     BookAvailabilityStatus AvailabilityStatus,
     string RowVersion);
@@ -42,7 +42,7 @@ public sealed record CreateBookRequest(
     string Author,
     string? Publisher,
     int? PublishedYear,
-    int CategoryId);
+    Guid CategoryId);
 
 public sealed record UpdateBookRequest(
     string Isbn,
@@ -50,7 +50,7 @@ public sealed record UpdateBookRequest(
     string Author,
     string? Publisher,
     int? PublishedYear,
-    int CategoryId,
+    Guid CategoryId,
     string RowVersion);
 
 public sealed record GetBooksQuery(
@@ -58,7 +58,7 @@ public sealed record GetBooksQuery(
     string? Title,
     string? Author,
     string? Isbn,
-    int? CategoryId,
+    Guid? CategoryId,
     bool? Available,
     string? SortBy,
     string? SortDirection,
@@ -72,19 +72,20 @@ public sealed record PagedResult<T>(
     int TotalCount,
     int TotalPages);
 
-public sealed record BorrowBookRequest(int BookId);
+public sealed record BorrowBookRequest(Guid BookId);
 
-public sealed record ReturnBorrowingRequest(int BorrowingId);
+public sealed record ReturnBorrowingRequest(Guid BorrowingId);
 
 public sealed record BorrowingHistoryQuery(
     string? Status,
     string? Sort,
+    string? Search,
     int Page,
     int PageSize);
 
 public sealed record BorrowTransactionDto(
-    int Id,
-    int BookId,
+    Guid Id,
+    Guid BookId,
     string BookTitle,
     Guid UserId,
     string UserEmail,

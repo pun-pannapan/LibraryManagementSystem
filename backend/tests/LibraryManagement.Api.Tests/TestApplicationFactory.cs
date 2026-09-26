@@ -15,6 +15,10 @@ namespace LibraryManagement.Api.Tests;
 
 public sealed class TestApplicationFactory : WebApplicationFactory<Program>
 {
+    public static readonly Guid TechnologyCategoryId = Guid.Parse("10000000-0000-0000-0000-000000000001");
+    public static readonly Guid CleanCodeBookId = Guid.Parse("20000000-0000-0000-0000-000000000001");
+    public static readonly Guid PragmaticProgrammerBookId = Guid.Parse("20000000-0000-0000-0000-000000000002");
+
     private readonly string databaseName = $"LibraryManagementTests-{Guid.NewGuid()}";
 
     public TestApplicationFactory()
@@ -84,6 +88,7 @@ public sealed class TestApplicationFactory : WebApplicationFactory<Program>
 
         var category = new Category
         {
+            Id = TechnologyCategoryId,
             Name = "Technology",
             Description = "Software and systems."
         };
@@ -94,6 +99,7 @@ public sealed class TestApplicationFactory : WebApplicationFactory<Program>
         dbContext.Books.AddRange(
             new Book
             {
+                Id = CleanCodeBookId,
                 Isbn = "9780132350884",
                 Title = "Clean Code",
                 Author = "Robert C. Martin",
@@ -103,6 +109,7 @@ public sealed class TestApplicationFactory : WebApplicationFactory<Program>
             },
             new Book
             {
+                Id = PragmaticProgrammerBookId,
                 Isbn = "9780201616224",
                 Title = "The Pragmatic Programmer",
                 Author = "Andrew Hunt and David Thomas",

@@ -50,7 +50,13 @@ export class BookFormComponent implements OnInit {
       '',
       [Validators.pattern(/^\d+$/), Validators.min(1000), Validators.max(this.currentYear + 1)],
     ],
-    categoryId: ['', [Validators.required, Validators.pattern(/^[1-9]\d*$/)]],
+    categoryId: [
+      '',
+      [
+        Validators.required,
+        Validators.pattern(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i),
+      ],
+    ],
   });
 
   ngOnInit(): void {
@@ -83,8 +89,8 @@ export class BookFormComponent implements OnInit {
   }
 
   private loadBook(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
-    if (!Number.isInteger(id) || id < 1) {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id || !this.isGuid(id)) {
       this.isLoadingBook.set(false);
       this.loadError.set('The requested book could not be found.');
       return;
@@ -129,9 +135,7 @@ export class BookFormComponent implements OnInit {
     if (control.hasError('required')) return 'This field is required.';
     if (control.hasError('maxlength')) return 'This value is too long.';
     if (control.hasError('pattern'))
-      return field === 'publishedYear'
-        ? 'Enter a whole-number year.'
-        : 'Enter a positive whole-number category ID.';
+      return field === 'publishedYear' ? 'Enter a whole-number year.' : 'Select a valid category.';
     if (control.hasError('min') || control.hasError('max')) {
       return `Enter a year between 1000 and ${this.currentYear + 1}.`;
     }
@@ -168,7 +172,7 @@ export class BookFormComponent implements OnInit {
       author: values.author.trim(),
       publisher: values.publisher.trim() || null,
       publishedYear: values.publishedYear ? Number(values.publishedYear) : null,
-      categoryId: Number(values.categoryId),
+      categoryId: values.categoryId,
     };
 
     const rowVersion = this.rowVersion;
@@ -180,7 +184,7 @@ export class BookFormComponent implements OnInit {
 
     const saveRequest =
       this.isEdit && rowVersion
-        ? this.api.updateBook(Number(this.route.snapshot.paramMap.get('id')), {
+        ? this.api.updateBook(this.route.snapshot.paramMap.get('id')!, {
             ...request,
             rowVersion,
           })
@@ -251,5 +255,9 @@ export class BookFormComponent implements OnInit {
     }
 
     this.formError.set(this.apiErrors.messageFor(error, 'Unable to save this book.'));
+  }
+
+  private isGuid(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
   }
 }

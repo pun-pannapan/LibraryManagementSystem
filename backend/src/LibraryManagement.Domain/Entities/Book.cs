@@ -4,7 +4,7 @@ namespace LibraryManagement.Domain.Entities;
 
 public sealed class Book
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     public required string Isbn { get; set; }
 
@@ -18,7 +18,7 @@ public sealed class Book
 
     public BookAvailabilityStatus AvailabilityStatus { get; set; } = BookAvailabilityStatus.Available;
 
-    public int CategoryId { get; set; }
+    public Guid CategoryId { get; set; }
 
     public Category Category { get; set; } = null!;
 

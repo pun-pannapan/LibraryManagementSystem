@@ -4,7 +4,11 @@ import { TestBed } from '@angular/core/testing';
 import { BorrowingsApiService } from './borrowings-api.service';
 
 describe('BorrowingsApiService endpoint mapping', () => {
-  beforeEach(() => TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] }));
+  beforeEach(() =>
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }),
+  );
   afterEach(() => {
     TestBed.inject(HttpTestingController).verify();
     TestBed.resetTestingModule();
@@ -13,11 +17,13 @@ describe('BorrowingsApiService endpoint mapping', () => {
   it('maps borrow, personal history, admin history, and return requests', () => {
     const api = TestBed.inject(BorrowingsApiService);
     const http = TestBed.inject(HttpTestingController);
-    api.borrowBook(9).subscribe();
+    const bookId = '20000000-0000-0000-0000-000000000001';
+    const borrowingId = '30000000-0000-0000-0000-000000000001';
+    api.borrowBook(bookId).subscribe();
     const borrow = http.expectOne('/api/v1/borrowings');
     expect(borrow.request.method).toBe('POST');
-    expect(borrow.request.body).toEqual({ bookId: 9 });
-    borrow.flush({ id: 1 });
+    expect(borrow.request.body).toEqual({ bookId });
+    borrow.flush({ id: borrowingId });
 
     api.getMyHistory({ status: 'Borrowed', page: 2, pageSize: 10 }).subscribe();
     const mine = http.expectOne((request) => request.url === '/api/v1/borrowings/me');
@@ -26,19 +32,27 @@ describe('BorrowingsApiService endpoint mapping', () => {
     expect(mine.request.params.get('page')).toBe('2');
     mine.flush({ items: [], page: 2, pageSize: 10, totalCount: 0, totalPages: 0 });
 
-    api.getAllHistory({ userId: '00000000-0000-0000-0000-000000000001', bookId: 9, status: 'Returned', borrowedFrom: '2026-01-01', borrowedTo: '2026-01-31', page: 1, pageSize: 20 }).subscribe();
+    api
+      .getAllHistory({
+        search: 'clean',
+        status: 'Returned',
+        borrowedFrom: '2026-01-01',
+        borrowedTo: '2026-01-31',
+        page: 1,
+        pageSize: 20,
+      })
+      .subscribe();
     const all = http.expectOne((request) => request.url === '/api/v1/borrowings');
     expect(all.request.method).toBe('GET');
-    expect(all.request.params.get('userId')).toBe('00000000-0000-0000-0000-000000000001');
-    expect(all.request.params.get('bookId')).toBe('9');
+    expect(all.request.params.get('search')).toBe('clean');
     expect(all.request.params.get('status')).toBe('Returned');
     expect(all.request.params.get('borrowedFrom')).toBe('2026-01-01');
     expect(all.request.params.get('borrowedTo')).toBe('2026-01-31');
     all.flush({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0 });
 
-    api.returnBook(3).subscribe();
-    const returned = http.expectOne('/api/v1/borrowings/3/return');
+    api.returnBook(borrowingId).subscribe();
+    const returned = http.expectOne(`/api/v1/borrowings/${borrowingId}/return`);
     expect(returned.request.method).toBe('POST');
-    returned.flush({ id: 3 });
+    returned.flush({ id: borrowingId });
   });
 });

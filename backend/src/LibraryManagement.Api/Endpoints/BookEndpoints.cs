@@ -25,13 +25,15 @@ public static class BookEndpoints
             .WithTags("Books");
 
         group.MapGet("/", GetBooksAsync)
-            .AllowAnonymous()
+            .RequireAuthorization()
             .Produces<PagedResult<BookDto>>()
-            .ProducesValidationProblem();
+            .ProducesValidationProblem()
+            .Produces(StatusCodes.Status401Unauthorized);
 
-        group.MapGet("/{id:int}", GetBookByIdAsync)
-            .AllowAnonymous()
+        group.MapGet("/{id:guid}", GetBookByIdAsync)
+            .RequireAuthorization()
             .Produces<BookDto>()
+            .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status404NotFound);
 
         group.MapPost("/", CreateBookAsync)
@@ -42,7 +44,7 @@ public static class BookEndpoints
             .Produces(StatusCodes.Status403Forbidden)
             .Produces(StatusCodes.Status409Conflict);
 
-        group.MapPut("/{id:int}", UpdateBookAsync)
+        group.MapPut("/{id:guid}", UpdateBookAsync)
             .RequireAuthorization(policy => policy.RequireRole(ApplicationRoles.Administrator))
             .Produces<BookDto>()
             .ProducesValidationProblem()
@@ -51,7 +53,7 @@ public static class BookEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status409Conflict);
 
-        group.MapDelete("/{id:int}", DeleteBookAsync)
+        group.MapDelete("/{id:guid}", DeleteBookAsync)
             .RequireAuthorization(policy => policy.RequireRole(ApplicationRoles.Administrator))
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound)
@@ -67,7 +69,7 @@ public static class BookEndpoints
         [FromQuery] string? title,
         [FromQuery] string? author,
         [FromQuery] string? isbn,
-        [FromQuery] int? categoryId,
+        [FromQuery] Guid? categoryId,
         [FromQuery] bool? available,
         [FromQuery] string? sortBy,
         [FromQuery] string? sortDirection,
@@ -150,7 +152,7 @@ public static class BookEndpoints
     }
 
     private static async Task<IResult> GetBookByIdAsync(
-        int id,
+        Guid id,
         ApplicationDbContext dbContext,
         CancellationToken cancellationToken)
     {
@@ -206,7 +208,7 @@ public static class BookEndpoints
     }
 
     private static async Task<IResult> UpdateBookAsync(
-        int id,
+        Guid id,
         UpdateBookRequest request,
         ApplicationDbContext dbContext,
         IValidator<UpdateBookRequest> validator,
@@ -262,7 +264,7 @@ public static class BookEndpoints
     }
 
     private static async Task<IResult> DeleteBookAsync(
-        int id,
+        Guid id,
         ApplicationDbContext dbContext,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
@@ -314,9 +316,9 @@ public static class BookEndpoints
 
     private static async Task<IResult?> ValidateBookBusinessRulesAsync(
         string isbn,
-        int categoryId,
+        Guid categoryId,
         ApplicationDbContext dbContext,
-        int? currentBookId,
+        Guid? currentBookId,
         CancellationToken cancellationToken)
     {
         var errors = new List<(string Field, string Error)>();

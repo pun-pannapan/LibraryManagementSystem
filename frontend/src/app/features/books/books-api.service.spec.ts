@@ -4,7 +4,11 @@ import { TestBed } from '@angular/core/testing';
 import { BooksApiService } from './books-api.service';
 
 describe('BooksApiService endpoint mapping', () => {
-  beforeEach(() => TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] }));
+  beforeEach(() =>
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    }),
+  );
   afterEach(() => {
     TestBed.inject(HttpTestingController).verify();
     TestBed.resetTestingModule();
@@ -21,14 +25,35 @@ describe('BooksApiService endpoint mapping', () => {
     expect(list.request.params.get('page')).toBe('2');
     list.flush({ items: [], page: 2, pageSize: 10, totalCount: 0, totalPages: 0 });
 
-    api.getBookById(4).subscribe();
-    expect(http.expectOne('/api/v1/books/4').request.method).toBe('GET');
-    api.createBook({ isbn: '9780000000001', title: 'Dune', author: 'Frank Herbert', publisher: null, publishedYear: 1965, categoryId: 1 }).subscribe();
+    const bookId = '20000000-0000-0000-0000-000000000001';
+    const categoryId = '10000000-0000-0000-0000-000000000001';
+    api.getBookById(bookId).subscribe();
+    expect(http.expectOne(`/api/v1/books/${bookId}`).request.method).toBe('GET');
+    api
+      .createBook({
+        isbn: '9780000000001',
+        title: 'Dune',
+        author: 'Frank Herbert',
+        publisher: null,
+        publishedYear: 1965,
+        categoryId,
+      })
+      .subscribe();
     expect(http.expectOne('/api/v1/books').request.method).toBe('POST');
-    api.updateBook(4, { isbn: '9780000000001', title: 'Dune', author: 'Frank Herbert', publisher: null, publishedYear: 1965, categoryId: 1, rowVersion: 'AQID' }).subscribe();
-    expect(http.expectOne('/api/v1/books/4').request.method).toBe('PUT');
-    api.deleteBook(4).subscribe();
-    const deletion = http.expectOne('/api/v1/books/4');
+    api
+      .updateBook(bookId, {
+        isbn: '9780000000001',
+        title: 'Dune',
+        author: 'Frank Herbert',
+        publisher: null,
+        publishedYear: 1965,
+        categoryId,
+        rowVersion: 'AQID',
+      })
+      .subscribe();
+    expect(http.expectOne(`/api/v1/books/${bookId}`).request.method).toBe('PUT');
+    api.deleteBook(bookId).subscribe();
+    const deletion = http.expectOne(`/api/v1/books/${bookId}`);
     expect(deletion.request.method).toBe('DELETE');
     deletion.flush(null);
   });

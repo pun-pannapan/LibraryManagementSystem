@@ -32,7 +32,7 @@ public static class BorrowingEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status409Conflict);
 
-        group.MapPost("/{id:int}/return", ReturnBookAsync)
+        group.MapPost("/{id:guid}/return", ReturnBookAsync)
             .Produces<BorrowTransactionDto>()
             .ProducesValidationProblem()
             .Produces(StatusCodes.Status401Unauthorized)
@@ -140,7 +140,7 @@ public static class BorrowingEndpoints
     }
 
     private static async Task<IResult> ReturnBookAsync(
-        int id,
+        Guid id,
         HttpContext context,
         ApplicationDbContext dbContext,
         IValidator<ReturnBorrowingRequest> validator,
@@ -218,6 +218,7 @@ public static class BorrowingEndpoints
         IValidator<BorrowingHistoryQuery> validator,
         [FromQuery] string? status,
         [FromQuery] string? sort,
+        [FromQuery] string? search,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
@@ -232,15 +233,16 @@ public static class BorrowingEndpoints
             .Include(item => item.Book)
             .Where(item => item.UserId == userId);
 
-        return await GetHistoryAsync(dbContext, query, new BorrowingHistoryQuery(status, sort, page, pageSize), validator, cancellationToken);
+        return await GetHistoryAsync(dbContext, query, new BorrowingHistoryQuery(status, sort, search, page, pageSize), validator, cancellationToken);
     }
 
     private static async Task<IResult> GetAllHistoryAsync(
         ApplicationDbContext dbContext,
         IValidator<BorrowingHistoryQuery> validator,
         [FromQuery] Guid? userId,
-        [FromQuery] int? bookId,
+        [FromQuery] Guid? bookId,
         [FromQuery] string? status,
+        [FromQuery] string? search,
         [FromQuery] DateTime? borrowedFrom,
         [FromQuery] DateTime? borrowedTo,
         [FromQuery] DateTime? returnedFrom,
@@ -265,6 +267,19 @@ public static class BorrowingEndpoints
             query = query.Where(item => item.BookId == bookId.Value);
         }
 
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var value = search.Trim();
+            query = query.Where(item =>
+                item.Book.Title.Contains(value)
+                || item.Book.Isbn.Contains(value)
+                || dbContext.Users.Any(user => user.Id == item.UserId
+                    && ((user.Email != null && user.Email.Contains(value))
+                        || (user.UserName != null && user.UserName.Contains(value))
+                        || (user.FirstName != null && user.FirstName.Contains(value))
+                        || (user.LastName != null && user.LastName.Contains(value)))));
+        }
+
         if (borrowedFrom.HasValue)
         {
             query = query.Where(item => item.BorrowedAtUtc >= borrowedFrom.Value);
@@ -285,7 +300,7 @@ public static class BorrowingEndpoints
             query = query.Where(item => item.ReturnedAtUtc <= returnedTo.Value);
         }
 
-        return await GetHistoryAsync(dbContext, query, new BorrowingHistoryQuery(status, sort, page, pageSize), validator, cancellationToken);
+        return await GetHistoryAsync(dbContext, query, new BorrowingHistoryQuery(status, sort, search, page, pageSize), validator, cancellationToken);
     }
 
     private static async Task<IResult> GetHistoryAsync(
@@ -375,7 +390,7 @@ public static class BorrowingEndpoints
 
     private static Task<BorrowTransaction?> LoadTransactionAsync(
         ApplicationDbContext dbContext,
-        int id,
+        Guid id,
         CancellationToken cancellationToken) =>
         dbContext.BorrowTransactions
             .AsNoTracking()

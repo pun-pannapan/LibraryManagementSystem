@@ -118,8 +118,10 @@ export class BookDetailComponent implements OnInit {
       });
   }
 
-  private readId(params: ParamMap): number | null {
-    const id = Number(params.get('id'));
-    return Number.isInteger(id) && id > 0 ? id : null;
+  private readId(params: ParamMap): string | null {
+    const id = params.get('id');
+    return id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+      ? id
+      : null;
   }
 }
