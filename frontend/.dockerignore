@@ -1,0 +1,12 @@
+**/node_modules/
+**/dist/
+**/.angular/
+.git/
+.vscode/
+*.log
+**/.env*
+**/*.pfx
+**/*.p12
+**/*.pem
+**/*.key
+**/secrets/

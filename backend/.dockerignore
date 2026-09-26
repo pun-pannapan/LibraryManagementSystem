@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+.git/
+.vs/
+**/.vs/
+**/TestResults/
+*.user
+**/*.pfx
+**/*.p12
+**/*.pem
+**/*.key
+**/.env*
+**/secrets/

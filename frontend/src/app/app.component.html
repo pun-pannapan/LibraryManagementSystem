@@ -1,0 +1,26 @@
+<main class="shell">
+  <section class="status-panel" aria-labelledby="page-title">
+    <div class="brand-mark" aria-hidden="true">LM</div>
+    <p class="eyebrow">Library Management System</p>
+    <h1 id="page-title">Frontend is ready</h1>
+    <p class="intro">
+      Angular is being served by Nginx and connected to the local API path.
+    </p>
+
+    <div class="status-row" [class.online]="apiStatus() === 'online'" [class.offline]="apiStatus() === 'offline'">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span>API status: {{ apiStatus() }}</span>
+    </div>
+
+    <dl class="runtime-details">
+      <div>
+        <dt>API base path</dt>
+        <dd>/api/v1</dd>
+      </div>
+      <div>
+        <dt>Web server</dt>
+        <dd>Nginx</dd>
+      </div>
+    </dl>
+  </section>
+</main>
